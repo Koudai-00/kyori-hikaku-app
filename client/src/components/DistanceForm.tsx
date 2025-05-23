@@ -3,11 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MapPin, Plus, Trash2, Calculator, Car, MapPinIcon as Walking, Bike, Train } from "lucide-react";
+import { MapPin, Plus, Trash2, Calculator, Car, MapPinIcon as Walking, Bike, Train, Settings } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ResultsTable from "./ResultsTable";
 import AdModal from "./AdModal";
+import RouteDetailModal, { type RouteSettings } from "./RouteDetailModal";
 import { getUserId, getCurrentMonth, updateUserUsage } from "@/lib/userTracking";
 
 type TravelMode = "driving" | "walking" | "transit" | "bicycling";
@@ -30,6 +31,11 @@ export default function DistanceForm() {
   const [showAdModal, setShowAdModal] = useState(false);
   const [pendingCalculation, setPendingCalculation] = useState<{ origin: string; destinations: string[] } | null>(null);
   const [errors, setErrors] = useState<{ origin?: string; destinations?: string }>({});
+  
+  // 詳細設定関連のstate
+  const [showRouteDetailModal, setShowRouteDetailModal] = useState(false);
+  const [currentDestinationIndex, setCurrentDestinationIndex] = useState<number>(-1);
+  const [destinationSettings, setDestinationSettings] = useState<Map<number, RouteSettings>>(new Map());
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -145,6 +151,23 @@ export default function DistanceForm() {
     }
   };
 
+  // 詳細設定関連のハンドラー
+  const openRouteDetailModal = (destinationIndex: number) => {
+    setCurrentDestinationIndex(destinationIndex);
+    setShowRouteDetailModal(true);
+  };
+
+  const handleRouteSettingsConfirm = (routeSettings: RouteSettings) => {
+    const newSettings = new Map(destinationSettings);
+    newSettings.set(currentDestinationIndex, routeSettings);
+    setDestinationSettings(newSettings);
+    setShowRouteDetailModal(false);
+  };
+
+  const hasCustomSettings = (index: number) => {
+    return destinationSettings.has(index);
+  };
+
   const travelModes = [
     { mode: "driving" as TravelMode, label: "車", icon: Car },
     { mode: "walking" as TravelMode, label: "徒歩", icon: Walking },
@@ -187,23 +210,42 @@ export default function DistanceForm() {
             
             <div className="space-y-3 mt-2">
               {destinations.map((destination, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Input
-                    value={destination}
-                    onChange={(e) => updateDestination(index, e.target.value)}
-                    placeholder={`例: ${index === 0 ? '新宿駅' : '渋谷駅'}`}
-                    className="flex-1"
-                  />
-                  {destinations.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeDestination(index)}
-                      className="text-red-500 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                <div key={index} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={destination}
+                      onChange={(e) => updateDestination(index, e.target.value)}
+                      placeholder={`例: ${index === 0 ? '新宿駅' : '渋谷駅'}`}
+                      className="flex-1"
+                    />
+                    {destination.trim() && origin.trim() && (
+                      <Button
+                        type="button"
+                        variant={hasCustomSettings(index) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => openRouteDetailModal(index)}
+                        className="px-3"
+                      >
+                        <Settings className="h-4 w-4 mr-1" />
+                        詳細設定
+                      </Button>
+                    )}
+                    {destinations.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeDestination(index)}
+                        className="text-red-500 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {hasCustomSettings(index) && (
+                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                      カスタム設定適用済み
+                    </div>
                   )}
                 </div>
               ))}
@@ -273,6 +315,15 @@ export default function DistanceForm() {
         isOpen={showAdModal}
         onClose={() => setShowAdModal(false)}
         onComplete={handleAdComplete}
+      />
+
+      <RouteDetailModal
+        isOpen={showRouteDetailModal}
+        onClose={() => setShowRouteDetailModal(false)}
+        onConfirm={handleRouteSettingsConfirm}
+        origin={origin}
+        destination={currentDestinationIndex >= 0 ? destinations[currentDestinationIndex] : ""}
+        travelMode={travelMode}
       />
     </>
   );

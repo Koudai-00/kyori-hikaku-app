@@ -5,7 +5,7 @@ import { insertUserUsageSchema, insertDistanceQuerySchema } from "@shared/schema
 import { z } from "zod";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
-const GOOGLE_MAPS_API_KEY = process.env.API_KEY || process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -107,6 +107,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Distance calculation error:', error);
+      res.status(500).json({ 
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get detailed routes using Google Directions API
+  app.post("/api/get-routes", async (req, res) => {
+    try {
+      const { origin, destination, travelMode = "driving", avoidTolls = false } = req.body;
+      
+      if (!origin || !destination) {
+        return res.status(400).json({ 
+          error: "origin and destination are required" 
+        });
+      }
+      
+      if (!GOOGLE_MAPS_API_KEY) {
+        return res.status(500).json({ 
+          error: "Google Maps API key not configured" 
+        });
+      }
+
+      // Construct Directions API URL
+      const baseUrl = "https://maps.googleapis.com/maps/api/directions/json";
+      const params = new URLSearchParams({
+        origin: origin,
+        destination: destination,
+        mode: travelMode,
+        language: 'ja',
+        alternatives: 'true',
+        key: GOOGLE_MAPS_API_KEY
+      });
+
+      // Add avoid tolls parameter for driving mode
+      if (travelMode === 'driving' && avoidTolls) {
+        params.append('avoid', 'tolls');
+      }
+
+      const response = await fetch(`${baseUrl}?${params}`);
+      const data = await response.json();
+
+      if (data.status !== 'OK') {
+        return res.status(400).json({ 
+          error: "Google Directions API error", 
+          details: data.status 
+        });
+      }
+
+      // Format routes
+      const routes = data.routes.map((route: any, index: number) => ({
+        routeIndex: index,
+        summary: route.summary || `ルート ${index + 1}`,
+        distance: route.legs[0].distance.text,
+        duration: route.legs[0].duration.text,
+        distanceValue: route.legs[0].distance.value,
+        durationValue: route.legs[0].duration.value,
+        polyline: route.overview_polyline.points,
+        warnings: route.warnings || [],
+        copyrights: route.copyrights
+      }));
+
+      res.json({ 
+        success: true,
+        origin: data.routes[0].legs[0].start_address,
+        destination: data.routes[0].legs[0].end_address,
+        routes 
+      });
+    } catch (error) {
+      console.error('Route calculation error:', error);
       res.status(500).json({ 
         error: "Internal server error",
         message: error instanceof Error ? error.message : "Unknown error"
