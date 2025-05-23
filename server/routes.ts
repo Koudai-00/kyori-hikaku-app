@@ -260,6 +260,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (routeSettings) {
         console.log("Route settings provided:", JSON.stringify(routeSettings));
+        
+        // 詳細設定情報の構造をデバッグするためにログ出力
+        for (const key in routeSettings) {
+          const setting = routeSettings[key];
+          console.log(`Route setting for destination ${key}:`, {
+            hasRouteData: !!setting.routeData,
+            selectedRouteIndex: setting.selectedRouteIndex,
+            avoidTolls: setting.avoidTolls
+          });
+          
+          if (setting.routeData) {
+            console.log(`Route data for destination ${key}:`, {
+              distance: setting.routeData.distance,
+              duration: setting.routeData.duration,
+              summary: setting.routeData.summary
+            });
+          }
+        }
       }
       
       if (!GOOGLE_MAPS_API_KEY) {
