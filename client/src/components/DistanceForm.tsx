@@ -73,9 +73,12 @@ export default function DistanceForm() {
       return response.json();
     },
     onSuccess: (data) => {
+      // 【開発モード中】月間利用回数制限を一時的に無効化（公開時にコメントアウトを解除）
+      /*
       if (data.usageCount >= 3) {
         setShowAdModal(true);
       } else {
+      */
         // Proceed with calculation
         if (pendingCalculation) {
           calculateMutation.mutate({
@@ -85,7 +88,9 @@ export default function DistanceForm() {
           });
           setPendingCalculation(null);
         }
+      /*
       }
+      */
     },
   });
 

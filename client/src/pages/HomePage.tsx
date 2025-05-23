@@ -29,8 +29,10 @@ export default function HomePage() {
           <div>
             <h4 className="font-medium text-yellow-800 mb-1">利用制限について</h4>
             <p className="text-sm text-yellow-700">
-              今月の残り利用回数: <span className="font-semibold">{remainingUses}回</span><br />
-              制限に達した場合は広告視聴で継続利用できます。
+              {/* 【開発モード中】月間利用回数制限を一時的に無効化（公開時にコメントアウトを解除） */}
+              <span className="font-semibold">開発モード: 利用制限は一時的に無効化されています</span><br />
+              {/* 今月の残り利用回数: <span className="font-semibold">{remainingUses}回</span><br /> */}
+              通常は制限に達した場合、広告視聴で継続利用できます。
             </p>
           </div>
         </div>
