@@ -512,7 +512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               distance: leg.distance.text,
               duration: leg.duration.text,
               distanceValue: leg.distance.value,
-              durationValue: le g.duration.value
+              durationValue: leg.duration.value
             }];
 
             return res.json({ success: true, origin: leg.start_address, results });
