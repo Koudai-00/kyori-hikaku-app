@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,11 +14,28 @@ export default function TestPage() {
   const [destinationPlaceId, setDestinationPlaceId] = useState("");
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [apiKey, setApiKey] = useState<string>("");
   const { toast } = useToast();
   
-  // Google Maps API設定を取得
+  // Google Maps API設定を正しく取得
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      try {
+        const response = await fetch("/api/google-maps-config");
+        const data = await response.json();
+        if (data.apiKey) {
+          setApiKey(data.apiKey);
+          console.log("API Key loaded for test page");
+        }
+      } catch (error) {
+        console.error("Failed to load API key:", error);
+      }
+    };
+    fetchApiKey();
+  }, []);
+  
   const { isLoaded: googleMapsLoaded } = useGoogleMaps({ 
-    apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY 
+    apiKey: apiKey 
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,18 +65,22 @@ export default function TestPage() {
     console.log("Destination:", destination, "Place ID:", destinationPlaceId);
     
     try {
+      const requestBody = {
+        origin: origin.trim(),
+        destinations: [destination.trim()],
+        travelMode: "transit",
+        ...(originPlaceId && { originPlaceId }),
+        ...(destinationPlaceId && { destinationPlaceIds: { 0: destinationPlaceId } })
+      };
+      
+      console.log("Sending request body:", requestBody);
+      
       const response = await fetch("/api/calculate-distances", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          origin: origin.trim(),
-          destinations: [destination.trim()],
-          travelMode: "transit",
-          originPlaceId,
-          destinationPlaceIds: { 0: destinationPlaceId }
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
