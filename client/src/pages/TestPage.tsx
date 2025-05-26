@@ -1,219 +1,257 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function TestPage() {
-  const [results, setResults] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
-  const { toast } = useToast();
+  const [testResult, setTestResult] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
-  // 固定の住所
-  const FIXED_ORIGIN = "東京駅、〒100-0005 東京都千代田区丸の内１丁目";
-  const FIXED_DESTINATION = "新宿駅、〒160-0022 東京都新宿区新宿３丁目３８−１";
+  // フォーム状態
+  const [origin, setOrigin] = useState("東京駅");
+  const [destination, setDestination] = useState("新宿駅");
+  const [travelMode, setTravelMode] = useState("transit");
+  const [departureTime, setDepartureTime] = useState("now");
 
-  const runTransitTest = async () => {
-    setLoading(true);
-    setDebugInfo(null);
-    setResults(null);
-    
-    const testStartTime = Date.now();
-    console.log("=== 公共交通 固定住所テスト開始 ===");
-    console.log(`出発地: ${FIXED_ORIGIN}`);
-    console.log(`目的地: ${FIXED_DESTINATION}`);
-    
-    try {
-      const requestBody = {
-        origin: FIXED_ORIGIN,
-        destinations: [FIXED_DESTINATION],
-        travelMode: "transit"
-      };
-      
-      console.log("リクエスト送信:", requestBody);
-      
-      const response = await fetch("/api/calculate-distances", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      const data = await response.json();
-      const testEndTime = Date.now();
-      const responseTime = testEndTime - testStartTime;
-      
-      console.log("API レスポンス:", data);
-      
-      // デバッグ情報を保存
-      setDebugInfo({
-        requestBody,
-        responseStatus: response.status,
-        responseTime: responseTime,
-        rawResponse: data,
-        timestamp: new Date().toLocaleString('ja-JP')
-      });
-
-      if (!response.ok) {
-        throw new Error(data.error || `APIエラー (${response.status})`);
-      }
-
-      setResults(data);
-      toast({
-        title: "テスト完了",
-        description: `公共交通テストが完了しました (${responseTime}ms)`,
-      });
-    } catch (error: any) {
-      console.error("テストエラー:", error);
-      setDebugInfo(prev => ({
-        ...prev,
-        error: error.message,
-        errorTime: new Date().toLocaleString('ja-JP')
-      }));
-      toast({
-        title: "テスト失敗",
-        description: error.message || "公共交通テストに失敗しました",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+  const getDepartureTimeValue = () => {
+    const now = new Date();
+    switch (departureTime) {
+      case "now":
+        return Math.floor(now.getTime() / 1000);
+      case "plus30":
+        return Math.floor((now.getTime() + 30 * 60 * 1000) / 1000);
+      case "plus60":
+        return Math.floor((now.getTime() + 60 * 60 * 1000) / 1000);
+      case "tomorrow9":
+        const tomorrow9am = new Date();
+        tomorrow9am.setDate(tomorrow9am.getDate() + 1);
+        tomorrow9am.setHours(9, 0, 0, 0);
+        return Math.floor(tomorrow9am.getTime() / 1000);
+      default:
+        return Math.floor(now.getTime() / 1000);
     }
   };
+
+  const runTest = async () => {
+    setIsLoading(true);
+    setTestResult(null);
+
+    try {
+      console.log("=== 公共交通デバッグテスト開始 ===");
+      
+      const requestData = {
+        origin,
+        destinations: [destination],
+        travelMode,
+        ...(travelMode === 'transit' && { departureTime: getDepartureTimeValue() })
+      };
+
+      console.log("リクエスト送信:", requestData);
+      console.log("出発時刻（Unix）:", travelMode === 'transit' ? getDepartureTimeValue() : "N/A");
+      console.log("出発時刻（人間可読）:", travelMode === 'transit' ? new Date(getDepartureTimeValue() * 1000).toLocaleString('ja-JP') : "N/A");
+
+      const response = await fetch('/api/calculate-distances', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      const result = await response.json();
+      console.log("API レスポンス:", result);
+
+      setTestResult({
+        status: response.status,
+        statusText: response.statusText,
+        data: result,
+        request: requestData,
+        departureTimeReadable: travelMode === 'transit' ? new Date(getDepartureTimeValue() * 1000).toLocaleString('ja-JP') : "N/A"
+      });
+
+    } catch (error) {
+      console.error("テストエラー:", error);
+      setTestResult({
+        error: error instanceof Error ? error.message : "Unknown error",
+        request: {
+          origin,
+          destinations: [destination],
+          travelMode
+        }
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const hasError = testResult?.data?.results?.[0]?.error === "ZERO_RESULTS" || testResult?.error;
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>🚇 公共交通テスト（固定住所）</CardTitle>
+          <CardTitle>🚇 公共交通ルート デバッグテスト</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <h3 className="font-semibold text-blue-800 mb-2">テスト設定</h3>
-            <div className="text-sm text-blue-700 space-y-1">
-              <div><strong>出発地:</strong> {FIXED_ORIGIN}</div>
-              <div><strong>目的地:</strong> {FIXED_DESTINATION}</div>
-              <div><strong>交通手段:</strong> 公共交通機関（transit）</div>
-              <div><strong>API:</strong> Google Maps Directions API</div>
+          {/* 入力フォーム */}
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <Label htmlFor="origin">出発地</Label>
+              <Input
+                id="origin"
+                value={origin}
+                onChange={(e) => setOrigin(e.target.value)}
+                placeholder="例: 東京駅"
+              />
             </div>
+            
+            <div>
+              <Label htmlFor="destination">目的地</Label>
+              <Input
+                id="destination"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                placeholder="例: 新宿駅"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="travelMode">交通手段</Label>
+              <Select value={travelMode} onValueChange={setTravelMode}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="transit">🚇 公共交通</SelectItem>
+                  <SelectItem value="driving">🚗 車</SelectItem>
+                  <SelectItem value="walking">🚶 徒歩</SelectItem>
+                  <SelectItem value="bicycling">🚴 自転車</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {travelMode === 'transit' && (
+              <div>
+                <Label htmlFor="departureTime">出発時刻</Label>
+                <Select value={departureTime} onValueChange={setDepartureTime}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="now">現在</SelectItem>
+                    <SelectItem value="plus30">30分後</SelectItem>
+                    <SelectItem value="plus60">1時間後</SelectItem>
+                    <SelectItem value="tomorrow9">明日朝9時</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <Button 
-            onClick={runTransitTest} 
-            disabled={loading} 
-            className="w-full h-12 text-lg"
-            size="lg"
+            onClick={runTest}
+            disabled={isLoading}
+            className="w-full"
           >
-            {loading ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                テスト実行中...
-              </div>
-            ) : (
-              "🚇 公共交通テストを実行"
-            )}
+            {isLoading ? "テスト実行中..." : "🔍 テスト実行"}
           </Button>
-        </CardContent>
-      </Card>
 
-      {/* テスト結果表示 */}
-      {results && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {results.results?.[0]?.error ? "❌ テスト失敗" : "✅ テスト結果"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* 基本情報 */}
-              <div className={`p-4 rounded-lg ${results.results?.[0]?.error ? 'bg-red-50' : 'bg-green-50'}`}>
-                <div className="text-sm space-y-1">
-                  <div><strong>出発地:</strong> {FIXED_ORIGIN}</div>
-                  <div><strong>目的地:</strong> {FIXED_DESTINATION}</div>
-                  <div><strong>交通手段:</strong> 公共交通機関</div>
+          {/* エラー案内 */}
+          {hasError && (
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="pt-4">
+                <div className="text-amber-800">
+                  <h4 className="font-semibold mb-2">⚠️ ルートが見つかりません</h4>
+                  <p className="text-sm mb-2">以下をお試しください：</p>
+                  <ul className="text-sm list-disc list-inside space-y-1">
+                    <li>駅名を簡略化する（例：「東京駅」「新宿駅」）</li>
+                    <li>出発時刻を変更する</li>
+                    <li>他の交通手段を選択する</li>
+                  </ul>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* テスト結果 */}
+          {testResult && (
+            <div className="mt-6 space-y-4">
+              <h3 className="text-lg font-semibold">📊 テスト結果</h3>
               
-              {/* 結果テーブル */}
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-300">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border border-gray-300 p-3 text-left">目的地</th>
-                      <th className="border border-gray-300 p-3 text-left">距離</th>
-                      <th className="border border-gray-300 p-3 text-left">時間</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {results.results?.map((result: any, index: number) => (
-                      <tr key={index}>
-                        <td className="border border-gray-300 p-3 font-medium">
-                          {result.destination}
-                        </td>
-                        <td className="border border-gray-300 p-3">
-                          {result.error ? (
-                            <span className="text-red-600 font-semibold">エラー</span>
-                          ) : (
-                            <span className="text-green-600 font-semibold">{result.distance}</span>
-                          )}
-                        </td>
-                        <td className="border border-gray-300 p-3">
-                          {result.error ? (
-                            <span className="text-red-600 font-semibold">エラー</span>
-                          ) : (
-                            <span className="text-green-600 font-semibold">{result.duration}</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">📤 送信パラメータ</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm">
+                    <p><strong>出発地:</strong> {testResult.request.origin}</p>
+                    <p><strong>目的地:</strong> {testResult.request.destinations?.[0]}</p>
+                    <p><strong>交通手段:</strong> {testResult.request.travelMode}</p>
+                    {testResult.departureTimeReadable !== "N/A" && (
+                      <p><strong>出発時刻:</strong> {testResult.departureTimeReadable}</p>
+                    )}
+                  </div>
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-sm font-medium">詳細なリクエスト（JSON）</summary>
+                    <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto mt-2">
+                      {JSON.stringify(testResult.request, null, 2)}
+                    </pre>
+                  </details>
+                </CardContent>
+              </Card>
 
-              {/* エラー詳細 */}
-              {results.results?.[0]?.error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <h4 className="font-semibold text-red-800 mb-2">❌ エラー詳細</h4>
-                  <p className="text-red-700 text-sm">{results.results[0].error}</p>
-                </div>
+              {testResult.status && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">📡 HTTP レスポンス</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className={`font-mono ${testResult.status === 200 ? 'text-green-600' : 'text-red-600'}`}>
+                      <strong>ステータス:</strong> {testResult.status} {testResult.statusText}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">📋 APIレスポンス</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {testResult.data?.results?.[0] && (
+                    <div className="space-y-2 text-sm mb-4">
+                      <p><strong>距離:</strong> {testResult.data.results[0].distance || "N/A"}</p>
+                      <p><strong>所要時間:</strong> {testResult.data.results[0].duration || "N/A"}</p>
+                      {testResult.data.results[0].error && (
+                        <p className="text-red-600"><strong>エラー:</strong> {testResult.data.results[0].error}</p>
+                      )}
+                    </div>
+                  )}
+                  <details>
+                    <summary className="cursor-pointer text-sm font-medium">完全なレスポンス（JSON）</summary>
+                    <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-96 mt-2">
+                      {JSON.stringify(testResult.data, null, 2)}
+                    </pre>
+                  </details>
+                </CardContent>
+              </Card>
+
+              {testResult.error && (
+                <Card className="border-red-200">
+                  <CardHeader>
+                    <CardTitle className="text-sm text-red-600">❌ エラー情報</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-red-600">{testResult.error}</p>
+                  </CardContent>
+                </Card>
               )}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* デバッグ情報表示 */}
-      {debugInfo && (
-        <Card>
-          <CardHeader>
-            <CardTitle>🔧 デバッグ情報</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>レスポンス時間:</strong> {debugInfo.responseTime}ms</div>
-                <div><strong>ステータス:</strong> {debugInfo.responseStatus}</div>
-                <div><strong>実行時刻:</strong> {debugInfo.timestamp}</div>
-                {debugInfo.error && (
-                  <div className="col-span-2 text-red-600">
-                    <strong>エラー:</strong> {debugInfo.error}
-                  </div>
-                )}
-              </div>
-              
-              <details className="mt-4">
-                <summary className="cursor-pointer font-semibold bg-gray-100 p-2 rounded text-sm">
-                  📊 完全なAPIレスポンス
-                </summary>
-                <pre className="mt-2 p-3 bg-gray-50 rounded text-xs overflow-auto border max-h-96">
-                  {JSON.stringify(debugInfo.rawResponse, null, 2)}
-                </pre>
-              </details>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
