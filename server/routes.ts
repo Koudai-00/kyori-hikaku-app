@@ -125,7 +125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get detailed routes using Google Directions API
   app.post("/api/get-routes", async (req, res) => {
     try {
-      const { origin, destination, travelMode = "driving", avoidTolls = false } = req.body;
+      const { origin, destination, travelMode = "driving", avoidTolls = false, originPlaceId, destinationPlaceId } = req.body;
       
       if (!origin || !destination) {
         return res.status(400).json({ 
@@ -143,9 +143,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Construct Directions API URL
       const baseUrl = "https://maps.googleapis.com/maps/api/directions/json";
+      
+      // Place IDが利用可能な場合はPlace IDを優先使用
+      const originParam = originPlaceId ? `place_id:${originPlaceId}` : origin;
+      const destinationParam = destinationPlaceId ? `place_id:${destinationPlaceId}` : destination;
+      
+      console.log(`Using origin: ${originParam}, destination: ${destinationParam}`);
+      
       const params = new URLSearchParams({
-        origin: origin,
-        destination: destination,
+        origin: originParam,
+        destination: destinationParam,
         mode: travelMode,
         language: 'ja',
         alternatives: 'true',

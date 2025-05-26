@@ -42,6 +42,10 @@ export default function DistanceForm() {
   const [showRouteDetailModal, setShowRouteDetailModal] = useState(false);
   const [currentDestinationIndex, setCurrentDestinationIndex] = useState<number>(-1);
   const [destinationSettings, setDestinationSettings] = useState<Map<number, RouteSettings>>(new Map());
+  
+  // Place ID情報を保存するstate
+  const [originPlaceId, setOriginPlaceId] = useState<string>("");
+  const [destinationPlaceIds, setDestinationPlaceIds] = useState<Map<number, string>>(new Map());
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -251,8 +255,9 @@ export default function DistanceForm() {
                 value={origin}
                 onChange={(value, placeData) => {
                   setOrigin(value);
-                  // 必要に応じて緯度経度情報も保存
-                  if (placeData?.location) {
+                  // Place IDを保存
+                  if (placeData?.placeId) {
+                    setOriginPlaceId(placeData.placeId);
                     console.log('Origin selected:', placeData);
                   }
                 }}
@@ -297,8 +302,11 @@ export default function DistanceForm() {
                         value={destination}
                         onChange={(value, placeData) => {
                           updateDestination(index, value);
-                          // 必要に応じて緯度経度情報も保存
-                          if (placeData?.location) {
+                          // Place IDを保存
+                          if (placeData?.placeId) {
+                            const newPlaceIds = new Map(destinationPlaceIds);
+                            newPlaceIds.set(index, placeData.placeId);
+                            setDestinationPlaceIds(newPlaceIds);
                             console.log(`Destination ${index} selected:`, placeData);
                           }
                         }}
@@ -420,6 +428,8 @@ export default function DistanceForm() {
         origin={origin}
         destination={currentDestinationIndex >= 0 ? destinations[currentDestinationIndex] : ""}
         travelMode={travelMode}
+        originPlaceId={originPlaceId}
+        destinationPlaceId={currentDestinationIndex >= 0 ? destinationPlaceIds.get(currentDestinationIndex) : undefined}
       />
     </>
   );
