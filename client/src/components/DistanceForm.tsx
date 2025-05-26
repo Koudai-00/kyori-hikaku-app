@@ -229,7 +229,7 @@ export default function DistanceForm() {
   const travelModes = [
     { mode: "driving" as TravelMode, label: "車", icon: Car },
     { mode: "walking" as TravelMode, label: "徒歩", icon: Walking },
-    { mode: "transit" as TravelMode, label: "公共交通", icon: Train },
+    // { mode: "transit" as TravelMode, label: "公共交通", icon: Train }, // 将来の機能追加のため保持
     { mode: "bicycling" as TravelMode, label: "自転車", icon: Bike },
   ];
 
@@ -365,7 +365,7 @@ export default function DistanceForm() {
           {/* Travel Mode Selection */}
           <div>
             <Label className="text-sm font-medium text-text-secondary">移動手段</Label>
-            <div className="grid grid-cols-2 gap-2 mt-2">
+            <div className="grid grid-cols-3 gap-3 mt-2">
               {travelModes.map((mode) => {
                 const Icon = mode.icon;
                 return (
@@ -374,10 +374,10 @@ export default function DistanceForm() {
                     type="button"
                     variant={travelMode === mode.mode ? "default" : "outline"}
                     onClick={() => setTravelMode(mode.mode)}
-                    className="p-3 h-auto flex flex-col items-center gap-1"
+                    className="p-3 h-auto flex flex-col items-center gap-2"
                   >
                     <Icon className="h-5 w-5" />
-                    <span className="text-sm">{mode.label}</span>
+                    <span className="text-sm font-medium">{mode.label}</span>
                   </Button>
                 );
               })}
