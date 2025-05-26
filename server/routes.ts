@@ -157,6 +157,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         params.append('avoid', 'tolls');
       }
 
+      // Add transit-specific parameters
+      if (travelMode === 'transit') {
+        // 現在時刻を基準にして公共交通の検索を行う
+        const now = Math.floor(Date.now() / 1000);
+        params.append('departure_time', now.toString());
+        
+        // 公共交通手段を指定（電車、バス、地下鉄など）
+        params.append('transit_mode', 'rail|subway|bus');
+        
+        // 乗り換え選択を最適化
+        params.append('transit_routing_preference', 'fewer_transfers');
+      }
+
       const apiUrl = `${baseUrl}?${params}`;
       console.log(`Calling Directions API: ${apiUrl.replace(GOOGLE_MAPS_API_KEY, 'API_KEY_HIDDEN')}`);
       
@@ -166,11 +179,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (data.status !== 'OK') {
         console.error("Directions API error:", data);
-        return res.status(400).json({ 
-          error: "Google Directions API error", 
-          details: data.status,
-          message: data.error_message || "No routes found"
-        });
+        
+        // 公共交通でZERO_RESULTSが返された場合の特別な処理
+        if (travelMode === 'transit' && data.status === 'ZERO_RESULTS') {
+          console.log("Transit mode failed, trying with different parameters...");
+          
+          // 代替として、より広い時間範囲で再試行
+          const altParams = new URLSearchParams({
+            origin: origin,
+            destination: destination,
+            mode: 'transit',
+            language: 'ja',
+            alternatives: 'true',
+            key: GOOGLE_MAPS_API_KEY
+          });
+          
+          // より広い出発時間範囲を設定
+          const futureTime = Math.floor((Date.now() + 30 * 60 * 1000) / 1000); // 30分後
+          altParams.append('departure_time', futureTime.toString());
+          altParams.append('transit_mode', 'rail|subway|bus|tram');
+          
+          const altUrl = `${baseUrl}?${altParams}`;
+          console.log(`Trying alternative transit request: ${altUrl.replace(GOOGLE_MAPS_API_KEY, 'API_KEY_HIDDEN')}`);
+          
+          try {
+            const altResponse = await fetch(altUrl);
+            const altData = await altResponse.json();
+            
+            if (altData.status === 'OK' && altData.routes && altData.routes.length > 0) {
+              // 代替ルートが見つかった場合は、そのデータを使用
+              console.log("Alternative transit route found");
+              data.routes = altData.routes;
+              data.status = 'OK';
+            } else {
+              // それでも見つからない場合は、利用可能な交通手段を提案
+              return res.status(400).json({
+                error: "公共交通のルートが見つかりません",
+                details: "この区間では公共交通機関での経路が見つかりませんでした",
+                availableModes: data.available_travel_modes || ['driving', 'walking', 'bicycling'],
+                suggestion: "他の交通手段をお試しください"
+              });
+            }
+          } catch (altError) {
+            console.error("Alternative transit request failed:", altError);
+          }
+        }
+        
+        // その他のエラーの場合
+        if (data.status !== 'OK') {
+          return res.status(400).json({ 
+            error: "Google Directions API error", 
+            details: data.status,
+            message: data.error_message || "ルートが見つかりませんでした",
+            availableModes: data.available_travel_modes || []
+          });
+        }
       }
 
       if (!data.routes || data.routes.length === 0) {

@@ -110,6 +110,11 @@ export default function RouteDetailModal({
       console.log("API data:", data);
 
       if (!response.ok) {
+        // 公共交通での特別なエラーハンドリング
+        if (data.error === "公共交通のルートが見つかりません") {
+          setError(`${data.details}\n\n利用可能な交通手段: ${data.availableModes?.join(', ')}`);
+          return;
+        }
         throw new Error(data.error || "ルートの取得に失敗しました");
       }
       
