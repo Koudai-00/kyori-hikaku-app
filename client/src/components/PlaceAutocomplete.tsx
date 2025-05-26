@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MapPin, Clock, X } from "lucide-react";
 
 interface PlaceResult {
   name: string;
@@ -140,8 +141,9 @@ export default function PlaceAutocomplete({
             } : undefined
           };
 
-          // フォームの値を更新
-          onChange(place.formatted_address || suggestion.address, placeData);
+          // フォームの値を「施設名 住所」形式で更新
+          const displayValue = `${placeData.name} ${placeData.address}`;
+          onChange(displayValue, placeData);
           setSuggestions([]);
           setShowSuggestions(false);
         }
@@ -149,9 +151,19 @@ export default function PlaceAutocomplete({
     } catch (error) {
       console.error('Error fetching place details:', error);
       // エラーの場合は基本情報だけで更新
-      onChange(suggestion.address, suggestion);
+      const displayValue = `${suggestion.name} ${suggestion.address}`;
+      onChange(displayValue, suggestion);
       setSuggestions([]);
       setShowSuggestions(false);
+    }
+  };
+
+  const handleClear = () => {
+    onChange('');
+    setSuggestions([]);
+    setShowSuggestions(false);
+    if (inputRef.current) {
+      inputRef.current.focus();
     }
   };
 
@@ -175,16 +187,31 @@ export default function PlaceAutocomplete({
           {label} {required && <span className="text-red-500">*</span>}
         </Label>
       )}
-      <Input
-        ref={inputRef}
-        id={id}
-        value={value}
-        onChange={handleInputChange}
-        onBlur={handleInputBlur}
-        onFocus={handleInputFocus}
-        placeholder={placeholder}
-        className={`${label ? 'mt-1' : ''} ${error ? 'border-red-500' : ''}`}
-      />
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          id={id}
+          value={value}
+          onChange={handleInputChange}
+          onBlur={handleInputBlur}
+          onFocus={handleInputFocus}
+          placeholder={placeholder}
+          className={`${label ? 'mt-1' : ''} ${error ? 'border-red-500' : ''} ${value.trim() ? 'pr-10' : ''}`}
+        />
+        {/* クリアボタン */}
+        {value.trim() && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:bg-gray-100 rounded-full"
+            onClick={handleClear}
+            tabIndex={-1}
+          >
+            <X className="h-4 w-4 text-gray-500" />
+          </Button>
+        )}
+      </div>
       
       {error && (
         <p className="text-red-500 text-xs mt-1">{error}</p>

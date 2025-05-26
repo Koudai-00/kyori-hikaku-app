@@ -256,7 +256,7 @@ export default function DistanceForm() {
                     console.log('Origin selected:', placeData);
                   }
                 }}
-                placeholder="東京ディズニーランド、早稲田大学など"
+                placeholder="東京駅"
                 required
                 error={errors.origin}
               />
@@ -269,7 +269,7 @@ export default function DistanceForm() {
                   id="origin"
                   value={origin}
                   onChange={(e) => setOrigin(e.target.value)}
-                  placeholder="例: 東京駅"
+                  placeholder="東京駅"
                   className="mt-2"
                 />
                 {errors.origin && (
@@ -302,7 +302,7 @@ export default function DistanceForm() {
                             console.log(`Destination ${index} selected:`, placeData);
                           }
                         }}
-                        placeholder={`${index === 0 ? '新宿駅、東京スカイツリーなど' : '渋谷駅、六本木ヒルズなど'}`}
+                        placeholder={`${index === 0 ? '新宿駅' : '渋谷駅'}`}
                       />
                     ) : (
                       <div className="flex-1">
