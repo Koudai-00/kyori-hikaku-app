@@ -159,15 +159,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add transit-specific parameters
       if (travelMode === 'transit') {
-        // 現在時刻を基準にして公共交通の検索を行う
-        const now = Math.floor(Date.now() / 1000);
-        params.append('departure_time', now.toString());
+        // 現在時刻から5分後の時刻を出発時刻として設定
+        const departureTime = Math.floor((Date.now() + 5 * 60 * 1000) / 1000);
+        params.append('departure_time', departureTime.toString());
         
         // 公共交通手段を指定（電車、バス、地下鉄など）
-        params.append('transit_mode', 'rail|subway|bus');
+        params.append('transit_mode', 'subway|rail|bus');
         
         // 乗り換え選択を最適化
         params.append('transit_routing_preference', 'fewer_transfers');
+        
+        console.log(`Transit parameters: departure_time=${departureTime}, modes=subway|rail|bus`);
       }
 
       const apiUrl = `${baseUrl}?${params}`;
@@ -182,46 +184,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // 公共交通でZERO_RESULTSが返された場合の特別な処理
         if (travelMode === 'transit' && data.status === 'ZERO_RESULTS') {
-          console.log("Transit mode failed, trying with different parameters...");
+          console.log("Transit mode failed, trying alternative approaches...");
           
-          // 代替として、より広い時間範囲で再試行
-          const altParams = new URLSearchParams({
-            origin: origin,
-            destination: destination,
-            mode: 'transit',
-            language: 'ja',
-            alternatives: 'true',
-            key: GOOGLE_MAPS_API_KEY
-          });
-          
-          // より広い出発時間範囲を設定
-          const futureTime = Math.floor((Date.now() + 30 * 60 * 1000) / 1000); // 30分後
-          altParams.append('departure_time', futureTime.toString());
-          altParams.append('transit_mode', 'rail|subway|bus|tram');
-          
-          const altUrl = `${baseUrl}?${altParams}`;
-          console.log(`Trying alternative transit request: ${altUrl.replace(GOOGLE_MAPS_API_KEY, 'API_KEY_HIDDEN')}`);
-          
-          try {
-            const altResponse = await fetch(altUrl);
-            const altData = await altResponse.json();
-            
-            if (altData.status === 'OK' && altData.routes && altData.routes.length > 0) {
-              // 代替ルートが見つかった場合は、そのデータを使用
-              console.log("Alternative transit route found");
-              data.routes = altData.routes;
-              data.status = 'OK';
-            } else {
-              // それでも見つからない場合は、利用可能な交通手段を提案
-              return res.status(400).json({
-                error: "公共交通のルートが見つかりません",
-                details: "この区間では公共交通機関での経路が見つかりませんでした",
-                availableModes: data.available_travel_modes || ['driving', 'walking', 'bicycling'],
-                suggestion: "他の交通手段をお試しください"
-              });
+          // 複数の代替アプローチを試行
+          const alternativeApproaches = [
+            // アプローチ1: 1時間後の出発時刻で再試行
+            {
+              departure_time: Math.floor((Date.now() + 60 * 60 * 1000) / 1000),
+              transit_mode: 'subway|rail',
+              description: '1時間後、地下鉄・電車のみ'
+            },
+            // アプローチ2: 明日の朝9時で試行
+            {
+              departure_time: Math.floor((new Date().setHours(33, 0, 0, 0)) / 1000), // 明日9時
+              transit_mode: 'subway|rail|bus',
+              description: '明日朝9時、全交通手段'
+            },
+            // アプローチ3: 簡略化された地点名で試行
+            {
+              departure_time: Math.floor((Date.now() + 30 * 60 * 1000) / 1000),
+              transit_mode: 'subway|rail',
+              origin: origin.split(' ')[0], // 最初の単語のみ使用
+              destination: destination.split(' ')[0],
+              description: '30分後、簡略化された地点名'
             }
-          } catch (altError) {
-            console.error("Alternative transit request failed:", altError);
+          ];
+          
+          for (const approach of alternativeApproaches) {
+            console.log(`Trying alternative approach: ${approach.description}`);
+            
+            const altParams = new URLSearchParams({
+              origin: approach.origin || origin,
+              destination: approach.destination || destination,
+              mode: 'transit',
+              language: 'ja',
+              alternatives: 'true',
+              departure_time: approach.departure_time.toString(),
+              transit_mode: approach.transit_mode,
+              key: GOOGLE_MAPS_API_KEY
+            });
+            
+            try {
+              const altResponse = await fetch(`${baseUrl}?${altParams}`);
+              const altData = await altResponse.json();
+              
+              if (altData.status === 'OK' && altData.routes && altData.routes.length > 0) {
+                console.log(`Alternative transit route found with approach: ${approach.description}`);
+                data.routes = altData.routes;
+                data.status = 'OK';
+                break; // 成功したら他のアプローチは試さない
+              }
+            } catch (altError) {
+              console.error(`Alternative approach failed: ${approach.description}`, altError);
+            }
+          }
+          
+          // すべてのアプローチが失敗した場合
+          if (data.status === 'ZERO_RESULTS') {
+            return res.status(400).json({
+              error: "公共交通のルートが見つかりません",
+              details: "この区間では公共交通機関での経路が見つかりませんでした。時間を変更するか、他の交通手段をお試しください。",
+              availableModes: data.available_travel_modes || ['driving', 'walking', 'bicycling'],
+              suggestion: "車、徒歩、または自転車での経路をご確認ください"
+            });
           }
         }
         
