@@ -42,10 +42,6 @@ export default function DistanceForm() {
   const [showRouteDetailModal, setShowRouteDetailModal] = useState(false);
   const [currentDestinationIndex, setCurrentDestinationIndex] = useState<number>(-1);
   const [destinationSettings, setDestinationSettings] = useState<Map<number, RouteSettings>>(new Map());
-  
-  // Place ID情報を保存するstate
-  const [originPlaceId, setOriginPlaceId] = useState<string>("");
-  const [destinationPlaceIds, setDestinationPlaceIds] = useState<Map<number, string>>(new Map());
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -230,12 +226,11 @@ export default function DistanceForm() {
     return destinationSettings.has(index);
   };
 
-  // 公共交通機能は将来の機能追加に備えて一時的に非表示
   const travelModes = [
     { mode: "driving" as TravelMode, label: "車", icon: Car },
     { mode: "walking" as TravelMode, label: "徒歩", icon: Walking },
+    { mode: "transit" as TravelMode, label: "公共交通", icon: Train },
     { mode: "bicycling" as TravelMode, label: "自転車", icon: Bike },
-    // { mode: "transit" as TravelMode, label: "公共交通", icon: Train }, // 将来の機能追加用
   ];
 
   return (
@@ -256,9 +251,8 @@ export default function DistanceForm() {
                 value={origin}
                 onChange={(value, placeData) => {
                   setOrigin(value);
-                  // Place IDを保存
-                  if (placeData?.placeId) {
-                    setOriginPlaceId(placeData.placeId);
+                  // 必要に応じて緯度経度情報も保存
+                  if (placeData?.location) {
                     console.log('Origin selected:', placeData);
                   }
                 }}
@@ -303,11 +297,8 @@ export default function DistanceForm() {
                         value={destination}
                         onChange={(value, placeData) => {
                           updateDestination(index, value);
-                          // Place IDを保存
-                          if (placeData?.placeId) {
-                            const newPlaceIds = new Map(destinationPlaceIds);
-                            newPlaceIds.set(index, placeData.placeId);
-                            setDestinationPlaceIds(newPlaceIds);
+                          // 必要に応じて緯度経度情報も保存
+                          if (placeData?.location) {
                             console.log(`Destination ${index} selected:`, placeData);
                           }
                         }}
@@ -374,7 +365,7 @@ export default function DistanceForm() {
           {/* Travel Mode Selection */}
           <div>
             <Label className="text-sm font-medium text-text-secondary">移動手段</Label>
-            <div className="grid grid-cols-3 gap-2 mt-2">
+            <div className="grid grid-cols-2 gap-2 mt-2">
               {travelModes.map((mode) => {
                 const Icon = mode.icon;
                 return (
@@ -429,8 +420,6 @@ export default function DistanceForm() {
         origin={origin}
         destination={currentDestinationIndex >= 0 ? destinations[currentDestinationIndex] : ""}
         travelMode={travelMode}
-        originPlaceId={originPlaceId}
-        destinationPlaceId={currentDestinationIndex >= 0 ? destinationPlaceIds.get(currentDestinationIndex) : undefined}
       />
     </>
   );

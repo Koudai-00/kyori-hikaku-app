@@ -8,17 +8,17 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
 
 export async function registerRoutes(app: Express): Promise<Server> {
-
+  
   // Get user usage for current month
   app.get("/api/usage/:userId/:month", async (req, res) => {
     try {
       const { userId, month } = req.params;
       const usage = await storage.getUserUsage(userId, month);
-
+      
       if (!usage) {
         return res.json({ usageCount: 0 });
       }
-
+      
       res.json({ usageCount: usage.usageCount });
     } catch (error) {
       res.status(500).json({ message: "Error fetching usage data" });
@@ -55,13 +55,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/get-distance", async (req, res) => {
     try {
       const { origin, destinations, travelMode = "driving" } = req.body;
-
+      
       if (!origin || !destinations || !Array.isArray(destinations) || destinations.length === 0) {
         return res.status(400).json({ 
           error: "origin and destinations (array) are required" 
         });
       }
-
+      
       if (!GOOGLE_MAPS_API_KEY) {
         return res.status(500).json({ 
           error: "Google Maps API key not configured" 
@@ -125,14 +125,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get detailed routes using Google Directions API
   app.post("/api/get-routes", async (req, res) => {
     try {
-      const { origin, destination, travelMode = "driving", avoidTolls = false, originPlaceId, destinationPlaceId } = req.body;
-
+      const { origin, destination, travelMode = "driving", avoidTolls = false } = req.body;
+      
       if (!origin || !destination) {
         return res.status(400).json({ 
           error: "origin and destination are required" 
         });
       }
-
+      
       if (!GOOGLE_MAPS_API_KEY) {
         return res.status(500).json({ 
           error: "Google Maps API key not configured" 
@@ -143,25 +143,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Construct Directions API URL
       const baseUrl = "https://maps.googleapis.com/maps/api/directions/json";
-
-      // Place IDが利用可能な場合はPlace IDを優先使用、そうでなければ簡略化した住所
-      let originParam, destinationParam;
-      
-      if (travelMode === 'transit') {
-        // 公共交通の場合は住所を簡略化
-        originParam = originPlaceId ? `place_id:${originPlaceId}` : origin.split('、')[0].split(' ')[0];
-        destinationParam = destinationPlaceId ? `place_id:${destinationPlaceId}` : destination.split('、')[0].split(' ')[0];
-      } else {
-        // その他の場合は元の形式
-        originParam = originPlaceId ? `place_id:${originPlaceId}` : origin;
-        destinationParam = destinationPlaceId ? `place_id:${destinationPlaceId}` : destination;
-      }
-
-      console.log(`Using origin: ${originParam}, destination: ${destinationParam}`);
-
       const params = new URLSearchParams({
-        origin: originParam,
-        destination: destinationParam,
+        origin: origin,
+        destination: destination,
         mode: travelMode,
         language: 'ja',
         alternatives: 'true',
@@ -173,136 +157,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         params.append('avoid', 'tolls');
       }
 
-      // Add transit-specific parameters
-      if (travelMode === 'transit') {
-        // 明日朝8時の確実な時間を設定
-        const tomorrow8am = new Date();
-        tomorrow8am.setDate(tomorrow8am.getDate() + 1);
-        tomorrow8am.setHours(8, 0, 0, 0);
-        const departureTime = Math.floor(tomorrow8am.getTime() / 1000);
-        params.append('departure_time', departureTime.toString());
-
-        // 地下鉄のみに制限して確実性を向上
-        params.append('transit_mode', 'subway');
-
-        // 乗り換え選択を最適化
-        params.append('transit_routing_preference', 'fewer_transfers');
-
-        // 地域設定を追加（日本向け）
-        params.append('region', 'jp');
-
-        console.log(`Transit parameters: departure_time=${departureTime} (tomorrow 8am), mode=subway, region=jp`);
-      }
-
       const apiUrl = `${baseUrl}?${params}`;
       console.log(`Calling Directions API: ${apiUrl.replace(GOOGLE_MAPS_API_KEY, 'API_KEY_HIDDEN')}`);
-
+      
       const response = await fetch(apiUrl);
       const data = await response.json();
       console.log("Directions API response status:", data.status);
-      console.log(`Routes found: ${data.routes ? data.routes.length : 0}`);
       
-      // 詳細な公共交通デバッグ情報
-      if (travelMode === 'transit') {
-        console.log('=== TRANSIT DEBUG INFO ===');
-        console.log('Available travel modes:', data.available_travel_modes);
-        console.log('Geocoded waypoints:', data.geocoded_waypoints?.length || 0);
-        if (data.routes && data.routes.length > 0) {
-          console.log('First route overview:', {
-            legs: data.routes[0].legs?.length || 0,
-            distance: data.routes[0].legs?.[0]?.distance?.text,
-            duration: data.routes[0].legs?.[0]?.duration?.text
-          });
-        }
-        console.log('=== END TRANSIT DEBUG ===');
-      }
-
       if (data.status !== 'OK') {
         console.error("Directions API error:", data);
-
-        // 公共交通でZERO_RESULTSが返された場合の特別な処理
-        if (travelMode === 'transit' && data.status === 'ZERO_RESULTS') {
-          console.log("Transit mode failed, trying alternative approaches...");
-
-          // 複数の代替アプローチを試行
-          const alternativeApproaches = [
-            // アプローチ1: 30分後の出発時刻で再試行
-            {
-              departure_time: Math.floor((Date.now() + 30 * 60 * 1000) / 1000),
-              transit_mode: 'subway|rail|bus|tram',
-              description: '30分後、全交通手段'
-            },
-            // アプローチ2: 1時間後の出発時刻で試行
-            {
-              departure_time: Math.floor((Date.now() + 60 * 60 * 1000) / 1000),
-              transit_mode: 'subway|rail',
-              description: '1時間後、地下鉄・電車のみ'
-            },
-            // アプローチ3: 明日の朝9時で試行
-            {
-              departure_time: Math.floor((new Date().setHours(33, 0, 0, 0)) / 1000), // 明日9時
-              transit_mode: 'subway|rail|bus|tram',
-              description: '明日朝9時、全交通手段'
-            },
-            // アプローチ4: 駅名を簡略化して試行
-            {
-              departure_time: Math.floor((Date.now() + 30 * 60 * 1000) / 1000),
-              transit_mode: 'subway|rail|bus|tram',
-              origin: origin.replace('駅', ''),
-              destination: destination.replace('駅', ''),
-              description: '30分後、駅名を簡略化'
-            }
-          ];
-
-          for (const approach of alternativeApproaches) {
-            console.log(`Trying alternative approach: ${approach.description}`);
-
-            const altParams = new URLSearchParams({
-              origin: approach.origin || origin,
-              destination: approach.destination || destination,
-              mode: 'transit',
-              language: 'ja',
-              alternatives: 'true',
-              departure_time: approach.departure_time.toString(),
-              transit_mode: approach.transit_mode,
-              key: GOOGLE_MAPS_API_KEY
-            });
-
-            try {
-              const altResponse = await fetch(`${baseUrl}?${altParams}`);
-              const altData = await altResponse.json();
-
-              if (altData.status === 'OK' && altData.routes && altData.routes.length > 0) {
-                console.log(`Alternative transit route found with approach: ${approach.description}`);
-                data.routes = altData.routes;
-                data.status = 'OK';
-                break; // 成功したら他のアプローチは試さない
-              }
-            } catch (altError) {
-              console.error(`Alternative approach failed: ${approach.description}`, altError);
-            }
-          }
-
-          // すべてのアプローチが失敗した場合
-          if (data.status === 'ZERO_RESULTS') {
-            return res.status(400).json({
-              error: "公共交通のルートが見つかりません",
-              details: "この区間では公共交通機関での経路が見つかりませんでした。時間を変更するか、他の交通手段をお試しください。",
-              availableModes: data.available_travel_modes || ['driving', 'walking', 'bicycling'],
-              suggestion: "車、徒歩、または自転車での経路をご確認ください"
-            });
-          }
-        }
-
-        // その他のエラーの場合
-        if (data.status !== 'OK') {
-          return res.status(400).json({ 
-            error: "Google Directions API error", 
-            details: data.status,
-            message: data.error_message || "ルートが見つかりませんでした",
-            availableModes: data.available_travel_modes || []
-          });
-        }
+        return res.status(400).json({ 
+          error: "Google Directions API error", 
+          details: data.status,
+          message: data.error_message || "No routes found"
+        });
       }
 
       if (!data.routes || data.routes.length === 0) {
@@ -328,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             warnings: ["ルート詳細が取得できませんでした"],
           };
         }
-
+        
         return {
           routeIndex: index,
           summary: route.summary || `ルート ${index + 1}`,
@@ -343,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       console.log(`Returning ${routes.length} routes`);
-
+      
       res.json({ 
         success: true,
         origin: data.routes[0].legs[0]?.start_address || origin,
@@ -352,7 +220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Route calculation error:', error);
-
+      
       // デモデータを返して、フロントエンドの動作を確保
       const demoRoutes = [
         {
@@ -376,7 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           warnings: ["注意: これはデモデータです", "高速道路を含むルート"]
         }
       ];
-
+      
       res.json({
         success: true,
         origin: origin,
@@ -390,17 +258,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/calculate-distances", async (req, res) => {
     try {
       const { origin, destinations, travelMode, userId, routeSettings } = req.body;
-
+      
       console.log("Calculate distances with:", { 
         origin, 
         destinationsCount: destinations.length, 
         travelMode, 
         hasRouteSettings: !!routeSettings 
       });
-
+      
       if (routeSettings) {
         console.log("Route settings provided:", JSON.stringify(routeSettings));
-
+        
         // 詳細設定情報の構造をデバッグするためにログ出力
         for (const key in routeSettings) {
           const setting = routeSettings[key];
@@ -409,7 +277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             selectedRouteIndex: setting.selectedRouteIndex,
             avoidTolls: setting.avoidTolls
           });
-
+          
           if (setting.routeData) {
             console.log(`Route data for destination ${key}:`, {
               distance: setting.routeData.distance,
@@ -419,117 +287,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
-
+      
       if (!GOOGLE_MAPS_API_KEY) {
         return res.status(500).json({ message: "Google Maps API key not configured" });
       }
 
-      /* 公共交通機能：将来の機能追加用に保存
-      // 公共交通の場合はDirections APIを使用
-      if (travelMode === 'transit') {
-        console.log('Transit mode detected: using Directions API instead of Distance Matrix API');
-        
-        // 住所を簡略化
-        const processedOrigin = origin.split('、')[0].split(' ')[0];
-        const processedDestination = destinations[0].split('、')[0].split(' ')[0];
-        
-        console.log('Transit mode: simplified addresses', {
-          originalOrigin: origin,
-          processedOrigin,
-          originalDestination: destinations[0],
-          processedDestination
-        });
-
-        // Directions APIを使用
-        const directionsUrl = "https://maps.googleapis.com/maps/api/directions/json";
-        const directionsParams = new URLSearchParams({
-          origin: processedOrigin,
-          destination: processedDestination,
-          mode: 'transit',
-          language: 'ja',
-          key: GOOGLE_MAPS_API_KEY
-        });
-
-        // 出発時刻を設定（現在時刻+5分後）
-        const departureTime = Math.floor((Date.now() + 5 * 60 * 1000) / 1000);
-        directionsParams.append('departure_time', departureTime.toString());
-        directionsParams.append('transit_mode', 'subway|rail');
-        directionsParams.append('region', 'jp');
-
-        console.log(`Transit Directions API params: departure_time=${departureTime} (5 minutes from now)`);
-        
-        const directionsResponse = await fetch(`${directionsUrl}?${directionsParams}`);
-        const directionsData = await directionsResponse.json();
-
-        console.log('Directions API response status:', directionsData.status);
-        
-        if (directionsData.status === 'OK' && directionsData.routes && directionsData.routes.length > 0) {
-          const route = directionsData.routes[0];
-          const leg = route.legs[0];
-          
-          const results = [{
-            destination: destinations[0],
-            distance: leg.distance.text,
-            duration: leg.duration.text,
-            distanceValue: leg.distance.value,
-            durationValue: leg.duration.value
-          }];
-
-          return res.json({ success: true, origin: leg.start_address, results });
-        } else {
-          // 公共交通が失敗した場合、英語で再試行
-          console.log('Transit failed with Japanese, trying English addresses');
-          
-          const englishOrigin = processedOrigin === '東京駅' ? 'Tokyo Station' : 
-                               processedOrigin === '新宿駅' ? 'Shinjuku Station' :
-                               processedOrigin;
-          const englishDestination = processedDestination === '新宿駅' ? 'Shinjuku Station' :
-                                    processedDestination === '東京駅' ? 'Tokyo Station' :
-                                    processedDestination;
-
-          const englishParams = new URLSearchParams({
-            origin: englishOrigin,
-            destination: englishDestination,
-            mode: 'transit',
-            language: 'ja',
-            key: GOOGLE_MAPS_API_KEY
-          });
-          englishParams.append('departure_time', departureTime.toString());
-          englishParams.append('transit_mode', 'subway|rail');
-          englishParams.append('region', 'jp');
-
-          console.log(`Trying English addresses: ${englishOrigin} -> ${englishDestination}`);
-          
-          const englishResponse = await fetch(`${directionsUrl}?${englishParams}`);
-          const englishData = await englishResponse.json();
-
-          if (englishData.status === 'OK' && englishData.routes && englishData.routes.length > 0) {
-            const route = englishData.routes[0];
-            const leg = route.legs[0];
-            
-            const results = [{
-              destination: destinations[0],
-              distance: leg.distance.text,
-              duration: leg.duration.text,
-              distanceValue: leg.distance.value,
-              durationValue: leg.duration.value
-            }];
-
-            return res.json({ success: true, origin: leg.start_address, results });
-          } else {
-            const results = [{
-              destination: destinations[0],
-              distance: "N/A",
-              duration: "N/A",
-              error: "ZERO_RESULTS"
-            }];
-            return res.json({ success: true, origin: origin, results });
-          }
-        }
-      }
-      */
-
-      // 公共交通以外の場合はDistance Matrix APIを使用
+      // Construct Distance Matrix API URL
       const baseUrl = "https://maps.googleapis.com/maps/api/distancematrix/json";
       const params = new URLSearchParams({
         origins: origin,
@@ -543,15 +306,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = await response.json();
 
       if (data.status !== 'OK') {
-        // 公共交通の場合はより詳細なエラーメッセージを提供
-        if (travelMode === 'transit') {
-          return res.status(400).json({ 
-            message: "公共交通のルートが見つかりません", 
-            error: data.status,
-            suggestion: "駅名を簡略化して再検索するか、他の交通手段をお試しください",
-            availableModes: data.available_travel_modes || ['driving', 'walking', 'bicycling']
-          });
-        }
         return res.status(400).json({ message: "Google Maps API error", error: data.status });
       }
 
@@ -563,20 +317,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (routeSettings[index] || routeSettings[index.toString()]) && 
           ((routeSettings[index] && routeSettings[index].routeData) || 
            (routeSettings[index.toString()] && routeSettings[index.toString()].routeData));
-
+        
         if (element.status === 'OK') {
           // カスタム設定があればそれを使用、なければAPIの結果を使用
           if (hasCustomSettings) {
             // キーが数値型と文字列型の両方に対応
             const routeSetting = routeSettings[index] || routeSettings[index.toString()];
             const customRoute = routeSetting.routeData;
-
+            
             console.log(`Using custom route for destination ${index}: ${destinations[index]}`, {
               distance: customRoute.distance,
               duration: customRoute.duration,
               summary: customRoute.summary
             });
-
+            
             return {
               destination: destinations[index],
               distance: customRoute.distance,
@@ -626,7 +380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/login", async (req, res) => {
     try {
       const { password } = req.body;
-
+      
       if (password === ADMIN_PASSWORD) {
         res.json({ success: true });
       } else {
@@ -641,11 +395,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/stats", async (req, res) => {
     try {
       const currentMonth = `${new Date().getMonth() + 1}_${new Date().getFullYear()}`;
-
+      
       const totalUsers = await storage.getTotalUsersCount();
       const monthlyQueries = await storage.getMonthlyQueriesCount(currentMonth);
       const allUsage = await storage.getAllUserUsage();
-
+      
       // Filter for current month and format for display
       const currentMonthUsage = allUsage
         .filter(usage => usage.month === currentMonth)

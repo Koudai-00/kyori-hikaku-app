@@ -27,8 +27,6 @@ interface RouteDetailModalProps {
   origin: string;
   destination: string;
   travelMode: "driving" | "walking" | "transit" | "bicycling";
-  originPlaceId?: string;
-  destinationPlaceId?: string;
 }
 
 export interface RouteSettings {
@@ -43,9 +41,7 @@ export default function RouteDetailModal({
   onConfirm,
   origin,
   destination,
-  travelMode,
-  originPlaceId,
-  destinationPlaceId
+  travelMode
 }: RouteDetailModalProps) {
   const [routes, setRoutes] = useState<RouteOption[]>([]);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
@@ -104,8 +100,6 @@ export default function RouteDetailModal({
           destination,
           travelMode,
           avoidTolls: travelMode === "driving" ? avoidTolls : false,
-          originPlaceId,
-          destinationPlaceId
         }),
       });
 
@@ -116,11 +110,6 @@ export default function RouteDetailModal({
       console.log("API data:", data);
 
       if (!response.ok) {
-        // 公共交通での特別なエラーハンドリング
-        if (data.error === "公共交通のルートが見つかりません") {
-          setError(`${data.details}\n\n利用可能な交通手段: ${data.availableModes?.join(', ')}`);
-          return;
-        }
         throw new Error(data.error || "ルートの取得に失敗しました");
       }
       
