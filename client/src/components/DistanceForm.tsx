@@ -3,7 +3,17 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MapPin, Plus, Trash2, Calculator, Car, MapPinIcon as Walking, Bike, Train, Settings } from "lucide-react";
+import {
+  MapPin,
+  Plus,
+  Trash2,
+  Calculator,
+  Car,
+  MapPinIcon as Walking,
+  Bike,
+  Train,
+  Settings,
+} from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
@@ -11,7 +21,11 @@ import ResultsTable from "./ResultsTable";
 import AdModal from "./AdModal";
 import RouteDetailModal, { type RouteSettings } from "./RouteDetailModal";
 import PlaceAutocomplete from "./PlaceAutocomplete";
-import { getUserId, getCurrentMonth, updateUserUsage } from "@/lib/userTracking";
+import {
+  getUserId,
+  getCurrentMonth,
+  updateUserUsage,
+} from "@/lib/userTracking";
 
 type TravelMode = "driving" | "walking" | "transit" | "bicycling";
 
@@ -36,12 +50,18 @@ export default function DistanceForm() {
     destinations: string[];
     routeSettings?: Record<number, RouteSettings>;
   } | null>(null);
-  const [errors, setErrors] = useState<{ origin?: string; destinations?: string }>({});
-  
+  const [errors, setErrors] = useState<{
+    origin?: string;
+    destinations?: string;
+  }>({});
+
   // 詳細設定関連のstate
   const [showRouteDetailModal, setShowRouteDetailModal] = useState(false);
-  const [currentDestinationIndex, setCurrentDestinationIndex] = useState<number>(-1);
-  const [destinationSettings, setDestinationSettings] = useState<Map<number, RouteSettings>>(new Map());
+  const [currentDestinationIndex, setCurrentDestinationIndex] =
+    useState<number>(-1);
+  const [destinationSettings, setDestinationSettings] = useState<
+    Map<number, RouteSettings>
+  >(new Map());
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -50,9 +70,9 @@ export default function DistanceForm() {
 
   // Google Maps API設定を取得
   const { data: googleMapsConfig } = useQuery({
-    queryKey: ['/api/google-maps-config'],
+    queryKey: ["/api/google-maps-config"],
     queryFn: async () => {
-      const response = await fetch('/api/google-maps-config');
+      const response = await fetch("/api/google-maps-config");
       return response.json();
     },
   });
@@ -60,25 +80,31 @@ export default function DistanceForm() {
   // Google Maps APIの読み込み
   const { isLoaded: googleMapsLoaded } = useGoogleMaps({
     apiKey: googleMapsConfig?.apiKey,
-    libraries: ['places']
+    libraries: ["places"],
   });
 
   const calculateMutation = useMutation({
-    mutationFn: async (data: { 
-      origin: string; 
-      destinations: string[]; 
-      travelMode: TravelMode; 
+    mutationFn: async (data: {
+      origin: string;
+      destinations: string[];
+      travelMode: TravelMode;
       userId: string;
       routeSettings?: Record<number, RouteSettings>;
     }) => {
-      const response = await apiRequest("POST", "/api/calculate-distances", data);
+      const response = await apiRequest(
+        "POST",
+        "/api/calculate-distances",
+        data,
+      );
       return response.json();
     },
     onSuccess: (data) => {
       setResults(data.results);
       setShowResults(true);
       updateUserUsage(userId, currentMonth);
-      queryClient.invalidateQueries({ queryKey: ["/api/usage", userId, currentMonth] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/usage", userId, currentMonth],
+      });
       toast({
         title: "計算完了",
         description: "距離と時間の計算が完了しました",
@@ -106,22 +132,25 @@ export default function DistanceForm() {
         setShowAdModal(true);
       } else {
       */
-        // Proceed with calculation
-        if (pendingCalculation) {
-          console.log("Sending calculation with settings:", pendingCalculation);
-          
-          // pendingCalculation内のrouteSettingsが適切にあるか確認
-          if (pendingCalculation.routeSettings) {
-            console.log("Route settings being sent:", pendingCalculation.routeSettings);
-          }
-          
-          calculateMutation.mutate({
-            ...pendingCalculation,
-            travelMode,
-            userId,
-          });
-          setPendingCalculation(null);
+      // Proceed with calculation
+      if (pendingCalculation) {
+        console.log("Sending calculation with settings:", pendingCalculation);
+
+        // pendingCalculation内のrouteSettingsが適切にあるか確認
+        if (pendingCalculation.routeSettings) {
+          console.log(
+            "Route settings being sent:",
+            pendingCalculation.routeSettings,
+          );
         }
+
+        calculateMutation.mutate({
+          ...pendingCalculation,
+          travelMode,
+          userId,
+        });
+        setPendingCalculation(null);
+      }
       /*
       }
       */
@@ -154,39 +183,40 @@ export default function DistanceForm() {
 
   const validateForm = () => {
     const newErrors: { origin?: string; destinations?: string } = {};
-    
+
     if (!origin.trim()) {
       newErrors.origin = "出発地を入力してください";
     }
-    
-    const validDestinations = destinations.filter(dest => dest.trim() !== "");
+
+    const validDestinations = destinations.filter((dest) => dest.trim() !== "");
     if (validDestinations.length === 0) {
       newErrors.destinations = "最低1つの目的地を入力してください";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
-    const validDestinations = destinations.filter(dest => dest.trim() !== "");
-    
+
+    const validDestinations = destinations.filter((dest) => dest.trim() !== "");
+
     // destinationSettingsをRecord型に変換
     const routeSettingsMap: Record<number, RouteSettings> = {};
     destinationSettings.forEach((value, key) => {
       routeSettingsMap[key] = value;
     });
-    
+
     setPendingCalculation({
       origin: origin.trim(),
       destinations: validDestinations,
-      routeSettings: Object.keys(routeSettingsMap).length > 0 ? routeSettingsMap : undefined
+      routeSettings:
+        Object.keys(routeSettingsMap).length > 0 ? routeSettingsMap : undefined,
     });
-    
+
     checkUsageMutation.mutate();
   };
 
@@ -210,15 +240,15 @@ export default function DistanceForm() {
 
   const handleRouteSettingsConfirm = (routeSettings: RouteSettings) => {
     console.log(`設定を保存: 目的地 ${currentDestinationIndex}`, routeSettings);
-    
+
     // 設定を保存
     const newSettings = new Map(destinationSettings);
     newSettings.set(currentDestinationIndex, routeSettings);
     setDestinationSettings(newSettings);
-    
+
     // デバッグ用：保存した設定の内容を確認
     console.log("保存された設定:", Array.from(newSettings.entries()));
-    
+
     setShowRouteDetailModal(false);
   };
 
@@ -240,7 +270,7 @@ export default function DistanceForm() {
           <MapPin className="h-5 w-5 text-primary" />
           出発地と目的地を入力
         </h2>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Origin Input */}
           <div>
@@ -250,10 +280,13 @@ export default function DistanceForm() {
                 label="出発地"
                 value={origin}
                 onChange={(value, placeData) => {
-                  setOrigin(value);
-                  // 必要に応じて緯度経度情報も保存
-                  if (placeData?.location) {
-                    console.log('Origin selected:', placeData);
+                  // 選択された場所の情報を反映
+                  if (placeData) {
+                    setOrigin(value);
+                    console.log("Origin selected:", placeData);
+                  } else {
+                    // 通常の入力の場合はそのまま値を設定
+                    setOrigin(value);
                   }
                 }}
                 placeholder="東京駅"
@@ -262,7 +295,10 @@ export default function DistanceForm() {
               />
             ) : (
               <>
-                <Label htmlFor="origin" className="text-sm font-medium text-text-secondary">
+                <Label
+                  htmlFor="origin"
+                  className="text-sm font-medium text-text-secondary"
+                >
                   出発地 <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -283,9 +319,11 @@ export default function DistanceForm() {
           <div>
             <Label className="text-sm font-medium text-text-secondary">
               目的地 <span className="text-red-500">*</span>
-              <span className="text-xs text-text-secondary ml-1">(最大5箇所)</span>
+              <span className="text-xs text-text-secondary ml-1">
+                (最大5箇所)
+              </span>
             </Label>
-            
+
             <div className="space-y-3 mt-2">
               {destinations.map((destination, index) => (
                 <div key={index} className="space-y-2">
@@ -296,20 +334,28 @@ export default function DistanceForm() {
                         label=""
                         value={destination}
                         onChange={(value, placeData) => {
-                          updateDestination(index, value);
-                          // 必要に応じて緯度経度情報も保存
-                          if (placeData?.location) {
-                            console.log(`Destination ${index} selected:`, placeData);
+                          // 選択された場所の情報を反映
+                          if (placeData) {
+                            updateDestination(index, value);
+                            console.log(
+                              `Destination ${index} selected:`,
+                              placeData,
+                            );
+                          } else {
+                            // 通常の入力の場合はそのまま値を設定
+                            updateDestination(index, value);
                           }
                         }}
-                        placeholder={`${index === 0 ? '新宿駅' : '渋谷駅'}`}
+                        placeholder={`${index === 0 ? "新宿駅" : "渋谷駅"}`}
                       />
                     ) : (
                       <div className="flex-1">
                         <Input
                           value={destination}
-                          onChange={(e) => updateDestination(index, e.target.value)}
-                          placeholder={`例: ${index === 0 ? '新宿駅' : '渋谷駅'}`}
+                          onChange={(e) =>
+                            updateDestination(index, e.target.value)
+                          }
+                          placeholder={`例: ${index === 0 ? "新宿駅" : "渋谷駅"}`}
                           className="w-full"
                         />
                       </div>
@@ -317,7 +363,9 @@ export default function DistanceForm() {
                     {destination.trim() && origin.trim() && (
                       <Button
                         type="button"
-                        variant={hasCustomSettings(index) ? "default" : "outline"}
+                        variant={
+                          hasCustomSettings(index) ? "default" : "outline"
+                        }
                         size="sm"
                         onClick={() => openRouteDetailModal(index)}
                         className="px-3"
@@ -346,7 +394,7 @@ export default function DistanceForm() {
                 </div>
               ))}
             </div>
-            
+
             <Button
               type="button"
               variant="outline"
@@ -364,7 +412,9 @@ export default function DistanceForm() {
 
           {/* Travel Mode Selection */}
           <div>
-            <Label className="text-sm font-medium text-text-secondary">移動手段</Label>
+            <Label className="text-sm font-medium text-text-secondary">
+              移動手段
+            </Label>
             <div className="grid grid-cols-3 gap-3 mt-2">
               {travelModes.map((mode) => {
                 const Icon = mode.icon;
@@ -387,7 +437,9 @@ export default function DistanceForm() {
           {/* Submit Button */}
           <Button
             type="submit"
-            disabled={calculateMutation.isPending || checkUsageMutation.isPending}
+            disabled={
+              calculateMutation.isPending || checkUsageMutation.isPending
+            }
             className="w-full py-4 font-semibold flex items-center gap-2"
           >
             <Calculator className="h-5 w-5" />
@@ -403,9 +455,7 @@ export default function DistanceForm() {
         </div>
       )}
 
-      {showResults && results.length > 0 && (
-        <ResultsTable results={results} />
-      )}
+      {showResults && results.length > 0 && <ResultsTable results={results} />}
 
       <AdModal
         isOpen={showAdModal}
@@ -418,7 +468,11 @@ export default function DistanceForm() {
         onClose={() => setShowRouteDetailModal(false)}
         onConfirm={handleRouteSettingsConfirm}
         origin={origin}
-        destination={currentDestinationIndex >= 0 ? destinations[currentDestinationIndex] : ""}
+        destination={
+          currentDestinationIndex >= 0
+            ? destinations[currentDestinationIndex]
+            : ""
+        }
         travelMode={travelMode}
       />
     </>

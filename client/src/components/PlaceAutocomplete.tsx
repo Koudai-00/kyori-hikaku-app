@@ -48,7 +48,7 @@ export default function PlaceAutocomplete({
     // Google Maps APIが読み込まれているかチェック
     if (window.google && window.google.maps && window.google.maps.places) {
       autocompleteService.current = new window.google.maps.places.AutocompleteService();
-      
+
       // PlacesServiceの初期化には地図要素が必要
       const mapDiv = document.createElement('div');
       const map = new window.google.maps.Map(mapDiv);
@@ -95,17 +95,20 @@ export default function PlaceAutocomplete({
         request,
         (predictions, status) => {
           setIsLoading(false);
-          
+
           if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
             const results: PlaceResult[] = predictions.slice(0, 5).map(prediction => {
               console.log('Prediction data:', prediction);
+              // 施設名と住所を適切に取得
+              const name = prediction.structured_formatting.main_text;
+              const address = prediction.structured_formatting.secondary_text || prediction.description;
               return {
-                name: prediction.structured_formatting.main_text,
-                address: prediction.structured_formatting.secondary_text || prediction.description,
+                name,
+                address,
                 placeId: prediction.place_id
               };
             });
-            
+
             setSuggestions(results);
             setShowSuggestions(true);
           } else {
@@ -124,7 +127,7 @@ export default function PlaceAutocomplete({
 
   const handleSuggestionClick = async (suggestion: PlaceResult) => {
     console.log('Suggestion clicked:', suggestion);
-    
+
     // 即座に「施設名 住所」形式で表示を更新
     const displayValue = `${suggestion.name} ${suggestion.address}`;
     console.log('Setting display value:', displayValue);
@@ -140,24 +143,33 @@ export default function PlaceAutocomplete({
           fields: ['name', 'formatted_address', 'geometry']
         };
 
-        placesService.current.getDetails(request, (place, status) => {
-          if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
-            const enhancedPlaceData: PlaceResult = {
-              name: place.name || suggestion.name,
-              address: place.formatted_address || suggestion.address,
-              placeId: suggestion.placeId,
-              location: place.geometry?.location ? {
-                lat: place.geometry.location.lat(),
-                lng: place.geometry.location.lng()
-              } : undefined
-            };
-
-            // 詳細情報が取得できた場合は、より正確な情報で再更新
-            const enhancedDisplayValue = `${enhancedPlaceData.name} ${enhancedPlaceData.address}`;
-            console.log('Enhanced place data:', enhancedPlaceData);
-            onChange(enhancedDisplayValue, enhancedPlaceData);
-          }
+        // 新しいAPIの使用方法に変更
+        const place = await new Promise<google.maps.places.Place | null>((resolve, reject) => {
+          placesService.current?.getDetails(request, (place, status) => {
+            if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
+              resolve(place);
+            } else {
+              resolve(null);
+            }
+          });
         });
+
+        if (place) {
+          const enhancedPlaceData: PlaceResult = {
+            name: place.name || suggestion.name,
+            address: place.formatted_address || suggestion.address,
+            placeId: suggestion.placeId,
+            location: place.geometry?.location ? {
+              lat: place.geometry.location.lat(),
+              lng: place.geometry.location.lng()
+            } : undefined
+          };
+
+          // 詳細情報が取得できた場合は、より正確な情報で再更新
+          const enhancedDisplayValue = `${enhancedPlaceData.name} ${enhancedPlaceData.address}`;
+          console.log('Enhanced place data:', enhancedPlaceData);
+          onChange(enhancedDisplayValue, enhancedPlaceData);
+        }
       } catch (error) {
         console.error('Error fetching place details:', error);
       }
@@ -218,7 +230,7 @@ export default function PlaceAutocomplete({
           </Button>
         )}
       </div>
-      
+
       {error && (
         <p className="text-red-500 text-xs mt-1">{error}</p>
       )}
@@ -231,7 +243,15 @@ export default function PlaceAutocomplete({
               <div
                 key={suggestion.placeId}
                 className="px-3 py-3 sm:px-4 hover:bg-gray-50 active:bg-gray-100 cursor-pointer border-b last:border-b-0 transition-colors touch-manipulation"
-                onClick={() => handleSuggestionClick(suggestion)}
+                onMouseDown={(e) => {
+                  // preventDefault で onBlur を防ぐ
+                  e.preventDefault();
+                  handleSuggestionClick(suggestion);
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSuggestionClick(suggestion);
+                }}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
