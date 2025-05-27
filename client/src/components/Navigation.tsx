@@ -18,7 +18,7 @@ export default function Navigation() {
 
   // <!--ここからテスト-->
   const testItems = [
-    { href: "/MapTest.html", label: "地図テストページ", icon: Map },
+    { path: "/map-test", label: "地図テストページ", icon: Map },
   ];
   // <!--ここまでテスト-->
 
@@ -87,18 +87,21 @@ export default function Navigation() {
                 <h3 className="text-sm font-semibold text-gray-500 px-4 mb-2">テスト用</h3>
                 {testItems.map((item) => {
                   const Icon = item.icon;
+                  const isActive = location === item.path;
                   return (
-                    <a
-                      key={item.href}
-                      href={item.href}
+                    <Link
+                      key={item.path}
+                      href={item.path}
                       onClick={closeMenu}
-                      className="block py-3 px-4 rounded-lg transition-colors hover:bg-gray-100"
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      className={`block py-3 px-4 rounded-lg transition-colors ${
+                        isActive
+                          ? "bg-blue-50 text-primary border-l-4 border-primary"
+                          : "hover:bg-gray-100"
+                      }`}
                     >
                       <Icon className="inline-block h-5 w-5 text-primary mr-3" />
                       {item.label}
-                    </a>
+                    </Link>
                   );
                 })}
               </div>

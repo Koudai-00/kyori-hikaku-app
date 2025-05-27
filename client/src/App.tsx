@@ -9,6 +9,7 @@ import HowToPage from "@/pages/HowToPage";
 import ArticlesPage from "@/pages/ArticlesPage";
 import AdminPage from "@/pages/AdminPage";
 // import TestPage from "@/pages/TestPage"; // APIテストページ - 将来の開発用に保持
+import MapTestPage from "@/pages/MapTestPage"; // <!--ここからテスト-->
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/articles" component={ArticlesPage} />
       <Route path="/admin" component={AdminPage} />
       {/* <Route path="/test" component={TestPage} /> */} {/* APIテストページ - 将来の開発用に保持 */}
+      <Route path="/map-test" component={MapTestPage} /> {/* <!--ここからテスト--> */}
       <Route component={NotFound} />
     </Switch>
   );
