@@ -260,6 +260,29 @@ export default function RouteDetailModal({
                       const mapElement = document.querySelector('[data-testid="google-map"]');
                       if (mapElement) {
                         console.log('テスト: 地図要素が見つかりました', mapElement);
+                        
+                        // Google Maps APIの再描画を実行
+                        if (window.google && window.google.maps) {
+                          console.log('テスト: Google Maps API利用可能');
+                          
+                          // 地図のresizeイベントをトリガー
+                          const maps = document.querySelectorAll('[data-testid="google-map"]');
+                          maps.forEach((element) => {
+                            if (element.__gm) {
+                              console.log('テスト: 地図インスタンス発見、resizeイベント発火');
+                              window.google.maps.event.trigger(element.__gm.map, 'resize');
+                            }
+                          });
+                          
+                          // 強制的に地図を再初期化
+                          setTimeout(() => {
+                            console.log('テスト: 地図の強制再描画実行');
+                            window.google.maps.event.trigger(window, 'resize');
+                          }, 100);
+                          
+                        } else {
+                          console.log('テスト: Google Maps API未利用可能');
+                        }
                       } else {
                         console.log('テスト: 地図要素が見つかりません');
                       }
