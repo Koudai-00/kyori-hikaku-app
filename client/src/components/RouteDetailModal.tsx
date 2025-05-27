@@ -237,13 +237,15 @@ export default function RouteDetailModal({
 
             {/* Google Map */}
             {!loading && routes.length > 0 && routes[selectedRouteIndex] && (
-              <GoogleMapView
-                origin={origin}
-                destination={destination}
-                travelMode={travelMode}
-                selectedRoute={selectedRouteIndex}
-                polyline={routes[selectedRouteIndex].polyline}
-              />
+              <div key={`map-${selectedRouteIndex}-${routes[selectedRouteIndex]?.polyline}`}>
+                <GoogleMapView
+                  origin={origin}
+                  destination={destination}
+                  travelMode={travelMode}
+                  selectedRoute={selectedRouteIndex}
+                  polyline={routes[selectedRouteIndex].polyline}
+                />
+              </div>
             )}
             
             {loading && (
