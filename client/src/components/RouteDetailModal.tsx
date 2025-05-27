@@ -235,15 +235,40 @@ export default function RouteDetailModal({
               </div>
             )}
 
+            {/* テスト用：ルート情報表示 */}
+            {!loading && routes.length > 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-yellow-800 mb-2">🔍 テスト用：地図表示機能へのルート情報</h4>
+                <div className="text-sm text-yellow-700 space-y-1">
+                  <div><strong>選択されたルートインデックス:</strong> {selectedRouteIndex}</div>
+                  <div><strong>総ルート数:</strong> {routes.length}</div>
+                  <div><strong>選択されたルートが存在:</strong> {routes[selectedRouteIndex] ? 'はい' : 'いいえ'}</div>
+                  {routes[selectedRouteIndex] && (
+                    <>
+                      <div><strong>ルート名:</strong> {routes[selectedRouteIndex].summary}</div>
+                      <div><strong>距離:</strong> {routes[selectedRouteIndex].distance}</div>
+                      <div><strong>所要時間:</strong> {routes[selectedRouteIndex].duration}</div>
+                      <div><strong>ポリライン:</strong> {routes[selectedRouteIndex].polyline ? `${routes[selectedRouteIndex].polyline.substring(0, 50)}...` : 'なし'}</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Google Map */}
             {!loading && routes.length > 0 && routes[selectedRouteIndex] && (
-              <GoogleMapView
-                origin={origin}
-                destination={destination}
-                travelMode={travelMode}
-                selectedRoute={selectedRouteIndex}
-                polyline={routes[selectedRouteIndex].polyline}
-              />
+              <>
+                <div className="text-xs text-gray-500 mb-2">
+                  地図表示中 - ルート {selectedRouteIndex + 1} / {routes.length}
+                </div>
+                <GoogleMapView
+                  origin={origin}
+                  destination={destination}
+                  travelMode={travelMode}
+                  selectedRoute={selectedRouteIndex}
+                  polyline={routes[selectedRouteIndex].polyline}
+                />
+              </>
             )}
             
             {loading && (
