@@ -18,6 +18,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
 import ResultsTable from "./ResultsTable";
+import TravelModeChangeConfirmDialog from "./TravelModeChangeConfirmDialog";
 import AdModal from "./AdModal";
 import RouteDetailModal, { type RouteSettings } from "./RouteDetailModal";
 import PlaceAutocomplete from "./PlaceAutocomplete";
@@ -62,6 +63,10 @@ export default function DistanceForm() {
   const [destinationSettings, setDestinationSettings] = useState<
     Map<number, RouteSettings>
   >(new Map());
+
+  // 移動手段変更確認ダイアログのstate
+  const [showTravelModeConfirm, setShowTravelModeConfirm] = useState(false);
+  const [pendingTravelMode, setPendingTravelMode] = useState<TravelMode | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -230,6 +235,52 @@ export default function DistanceForm() {
       });
       setPendingCalculation(null);
     }
+  };
+
+  // カスタムルート設定があるかチェック
+  const hasCustomRouteSettings = () => {
+    return destinationSettings.size > 0;
+  };
+
+  // 移動手段変更ハンドラー
+  const handleTravelModeChange = (newMode: TravelMode) => {
+    if (hasCustomRouteSettings()) {
+      // カスタム設定がある場合は確認ダイアログを表示
+      setPendingTravelMode(newMode);
+      setShowTravelModeConfirm(true);
+    } else {
+      // カスタム設定がない場合は直接変更
+      setTravelMode(newMode);
+    }
+  };
+
+  // 移動手段変更確認時の処理
+  const confirmTravelModeChange = () => {
+    if (pendingTravelMode) {
+      // カスタム設定を全て解除
+      setDestinationSettings(new Map());
+      // 移動手段を変更
+      setTravelMode(pendingTravelMode);
+      // 結果をクリア（再計算が必要）
+      setResults([]);
+      setShowResults(false);
+      
+      console.log(`移動手段を${pendingTravelMode}に変更し、カスタム設定を解除しました`);
+      
+      toast({
+        title: "移動手段を変更しました",
+        description: "カスタムルート設定を解除して再計算してください",
+      });
+    }
+    
+    setShowTravelModeConfirm(false);
+    setPendingTravelMode(null);
+  };
+
+  // 移動手段変更キャンセル時の処理
+  const cancelTravelModeChange = () => {
+    setShowTravelModeConfirm(false);
+    setPendingTravelMode(null);
   };
 
   // 詳細設定関連のハンドラー
@@ -423,7 +474,7 @@ export default function DistanceForm() {
                     key={mode.mode}
                     type="button"
                     variant={travelMode === mode.mode ? "default" : "outline"}
-                    onClick={() => setTravelMode(mode.mode)}
+                    onClick={() => handleTravelModeChange(mode.mode)}
                     className="p-3 h-auto flex flex-col items-center gap-2"
                   >
                     <Icon className="h-5 w-5" />
@@ -474,6 +525,14 @@ export default function DistanceForm() {
             : ""
         }
         travelMode={travelMode}
+      />
+
+      {/* 移動手段変更確認ダイアログ */}
+      <TravelModeChangeConfirmDialog
+        isOpen={showTravelModeConfirm}
+        onConfirm={confirmTravelModeChange}
+        onCancel={cancelTravelModeChange}
+        newTravelMode={pendingTravelMode || "driving"}
       />
     </>
   );
