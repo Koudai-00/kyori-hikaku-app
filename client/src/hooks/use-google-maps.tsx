@@ -92,8 +92,16 @@ export function useGoogleMapsDirections({
 
   // マップを初期化
   useEffect(() => {
+    console.log('地図初期化チェック:', {
+      hasGoogle: !!window.google,
+      hasMaps: !!(window.google && window.google.maps),
+      hasMapRef: !!mapRef.current,
+      hasMap: !!map
+    });
+
     if (window.google && window.google.maps && mapRef.current && !map) {
       try {
+        console.log('地図を初期化中...');
         const newMap = new window.google.maps.Map(mapRef.current, {
           center: { lat: 35.6895, lng: 139.6917 }, // 東京（デフォルト）
           zoom: 13,
@@ -101,6 +109,7 @@ export function useGoogleMapsDirections({
           fullscreenControl: false,
           streetViewControl: false,
         });
+        console.log('地図初期化完了:', newMap);
         setMap(newMap);
         
         if (onMapLoad) {
