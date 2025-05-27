@@ -76,6 +76,15 @@ export default function GoogleMapView({
   }
 
   return (
-    <div ref={mapRef} className="rounded-lg overflow-hidden h-[300px] w-full shadow-sm bg-gray-100"></div>
+    <div 
+      ref={mapRef} 
+      className="rounded-lg overflow-hidden h-[300px] w-full shadow-sm bg-gray-100"
+      style={{ 
+        minHeight: '300px',
+        width: '100%',
+        position: 'relative',
+        display: 'block'
+      }}
+    ></div>
   );
 }

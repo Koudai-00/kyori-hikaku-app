@@ -112,6 +112,14 @@ export function useGoogleMapsDirections({
         console.log('地図初期化完了:', newMap);
         setMap(newMap);
         
+        // 地図の表示を強制的に更新
+        setTimeout(() => {
+          if (newMap && window.google && window.google.maps) {
+            window.google.maps.event.trigger(newMap, 'resize');
+            console.log('地図のリサイズイベントを発火');
+          }
+        }, 100);
+        
         if (onMapLoad) {
           onMapLoad(newMap);
         }
