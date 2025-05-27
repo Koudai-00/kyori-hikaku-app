@@ -1,4 +1,5 @@
 import { useGoogleMaps, useGoogleMapsDirections } from "@/hooks/use-google-maps";
+import { useQuery } from "@tanstack/react-query";
 
 interface GoogleMapViewProps {
   origin: string;
@@ -8,6 +9,10 @@ interface GoogleMapViewProps {
   polyline?: string;
 }
 
+interface GoogleMapsConfig {
+  apiKey: string;
+}
+
 export default function GoogleMapView({
   origin,
   destination,
@@ -15,11 +20,13 @@ export default function GoogleMapView({
   selectedRoute,
   polyline
 }: GoogleMapViewProps) {
-  // APIキーは環境変数から取得
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  // APIキーをサーバーから動的に取得
+  const { data: config } = useQuery<GoogleMapsConfig>({
+    queryKey: ["/api/google-maps-config"],
+  });
   
   // Google Maps APIのロード状態を管理
-  const { isLoaded, loadError } = useGoogleMaps({ apiKey });
+  const { isLoaded, loadError } = useGoogleMaps({ apiKey: config?.apiKey });
   
   // ルート表示の状態を管理
   const { mapRef, error } = useGoogleMapsDirections({
@@ -30,12 +37,14 @@ export default function GoogleMapView({
     polyline
   });
 
-  // ローディング中の表示
-  if (!isLoaded) {
+  // APIキー取得中またはGoogle Maps API読み込み中の表示
+  if (!config?.apiKey || !isLoaded) {
     return (
       <div className="bg-gray-100 rounded-lg p-8 text-center h-[300px] flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <p className="ml-3 text-sm text-gray-600">地図をロード中...</p>
+        <p className="ml-3 text-sm text-gray-600">
+          {!config?.apiKey ? "設定を読み込み中..." : "地図をロード中..."}
+        </p>
       </div>
     );
   }
