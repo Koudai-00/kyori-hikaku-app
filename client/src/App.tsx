@@ -28,7 +28,7 @@ function App() {
       <TooltipProvider>
         <div className="min-h-screen bg-neutral">
           <Navigation />
-          <main className="max-w-md md:max-w-4xl mx-auto p-4 pb-20">
+          <main className="max-w-md md:max-w-4xl mx-auto p-4 pb-32">
             <Router />
           </main>
           
