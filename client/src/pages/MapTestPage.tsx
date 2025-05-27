@@ -1,14 +1,23 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // <!--ここからテスト-->
 interface GoogleMapsConfig {
   apiKey: string;
 }
 
+type TravelMode = "driving" | "walking" | "bicycling";
+
 export default function MapTestPage() {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
+  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+  
+  const [travelMode, setTravelMode] = useState<TravelMode>("driving");
+  const [routeVisible, setRouteVisible] = useState(false);
 
   const { data: config } = useQuery<GoogleMapsConfig>({
     queryKey: ["/api/google-maps-config"],
@@ -109,6 +118,14 @@ export default function MapTestPage() {
         debugLog("Google Maps instance created successfully");
         mapInstanceRef.current = map;
 
+        // DirectionsServiceとDirectionsRendererを初期化
+        debugLog("Initializing Directions services...");
+        directionsServiceRef.current = new google.maps.DirectionsService();
+        directionsRendererRef.current = new google.maps.DirectionsRenderer({
+          draggable: false,
+          map: map,
+        });
+
         // 東京駅にマーカーを追加
         debugLog("Adding Tokyo Station marker...");
         const tokyoMarker = new google.maps.Marker({
@@ -192,21 +209,110 @@ export default function MapTestPage() {
     };
   }, []);
 
+  // ルート表示機能
+  const showRoute = () => {
+    if (!directionsServiceRef.current || !directionsRendererRef.current || !mapInstanceRef.current) {
+      debugLog("Directions services not available");
+      return;
+    }
+
+    debugLog(`Calculating route with travel mode: ${travelMode}`);
+
+    const tokyoStation = { lat: 35.6812362, lng: 139.7671248 };
+    const shinjukuStation = { lat: 35.6896067, lng: 139.7005713 };
+
+    const travelModeMap = {
+      driving: google.maps.TravelMode.DRIVING,
+      walking: google.maps.TravelMode.WALKING,
+      bicycling: google.maps.TravelMode.BICYCLING,
+    };
+
+    const request = {
+      origin: tokyoStation,
+      destination: shinjukuStation,
+      travelMode: travelModeMap[travelMode],
+    };
+
+    directionsServiceRef.current.route(request, (result, status) => {
+      if (status === google.maps.DirectionsStatus.OK && result) {
+        debugLog("Route calculation successful");
+        directionsRendererRef.current?.setDirections(result);
+        setRouteVisible(true);
+        
+        // ルート情報をログに出力
+        const route = result.routes[0];
+        const leg = route.legs[0];
+        debugLog(`Distance: ${leg.distance?.text}, Duration: ${leg.duration?.text}`);
+      } else {
+        debugLog(`Route calculation failed: ${status}`);
+        console.error("Directions request failed due to " + status);
+      }
+    });
+  };
+
+  // ルートを非表示にする
+  const hideRoute = () => {
+    if (directionsRendererRef.current) {
+      debugLog("Hiding route");
+      directionsRendererRef.current.setDirections({ routes: [] } as any);
+      setRouteVisible(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h1 className="text-2xl font-bold text-gray-800 mb-4">Google Maps JavaScript API テスト</h1>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
             <div>
               <p><strong>出発地:</strong> 東京駅（〒100-0005 東京都千代田区丸の内1丁目9）</p>
               <p><strong>目的地:</strong> 新宿駅（〒160-0022 東京都新宿区新宿3丁目38−1）</p>
             </div>
             <div>
-              <p><strong>移動手段:</strong> 車（DRIVING）</p>
               <p><strong>地図中心:</strong> 東京駅、ズーム14</p>
+              <p><strong>ルート表示:</strong> {routeVisible ? "表示中" : "非表示"}</p>
             </div>
           </div>
+          
+          {/* <!--ここからテスト--> */}
+          <div className="border-t pt-4">
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  移動手段を選択
+                </label>
+                <Select value={travelMode} onValueChange={(value: TravelMode) => setTravelMode(value)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="移動手段を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="driving">🚗 車（ドライビング）</SelectItem>
+                    <SelectItem value="walking">🚶 徒歩（ウォーキング）</SelectItem>
+                    <SelectItem value="bicycling">🚲 自転車（サイクリング）</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  onClick={showRoute}
+                  disabled={!mapInstanceRef.current}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  ルート表示
+                </Button>
+                <Button 
+                  onClick={hideRoute}
+                  disabled={!routeVisible}
+                  variant="outline"
+                >
+                  ルート非表示
+                </Button>
+              </div>
+            </div>
+          </div>
+          {/* <!--ここまでテスト--> */}
         </div>
 
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -252,6 +358,11 @@ export default function MapTestPage() {
             <li>✓ 新宿駅（赤のマーカー）が表示される</li>
             <li>✓ マーカーをクリックすると情報ウィンドウが表示される</li>
             <li>✓ 地図操作（ズーム、パン）が可能</li>
+            <li>🔵 移動手段を選択できる（車・徒歩・自転車）</li>
+            <li>🔵 「ルート表示」ボタンでルートが地図上に表示される</li>
+            <li>🔵 「ルート非表示」ボタンでルートが消える</li>
+            <li>🔵 移動手段を変更してルートを再表示できる</li>
+            <li>🔵 距離と所要時間がデバッグログに表示される</li>
           </ul>
         </div>
       </div>
