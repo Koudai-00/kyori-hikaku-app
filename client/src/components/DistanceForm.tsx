@@ -639,14 +639,7 @@ export default function DistanceForm() {
 
       {/* 公共交通開発中ポップアップ */}
       {showTransitPopup && (
-        <div 
-          className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm mx-4 transition-all duration-300 ${
-            showTransitPopup ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
-          }`}
-          style={{
-            animation: showTransitPopup ? 'fadeIn 0.3s ease-out, fadeOut 0.3s ease-in 4.7s forwards' : undefined
-          }}
-        >
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm mx-4 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
               <Train className="w-4 h-4 text-blue-600" />
@@ -668,30 +661,6 @@ export default function DistanceForm() {
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateX(-50%) translateY(-8px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-          }
-        }
-        
-        @keyframes fadeOut {
-          from {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-          }
-          to {
-            opacity: 0;
-            transform: translateX(-50%) translateY(-8px);
-          }
-        }
-      `}</style>
     </>
   );
 }
