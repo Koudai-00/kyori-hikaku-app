@@ -4,7 +4,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
 import HomePage from "@/pages/HomePage";
 import HowToPage from "@/pages/HowToPage";
 import ArticlesPage from "@/pages/ArticlesPage";
@@ -36,8 +35,6 @@ function App() {
           <main className="max-w-md md:max-w-4xl mx-auto p-4 pb-32">
             <Router />
           </main>
-          
-          <Footer />
           
           {/* Advertisement Banner */}
           <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 max-w-md md:max-w-4xl mx-auto">

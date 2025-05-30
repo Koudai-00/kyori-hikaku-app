@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, Home, HelpCircle, Newspaper } from "lucide-react";
+import { Menu, X, Home, HelpCircle, Newspaper, FileText, Shield } from "lucide-react";
 
 export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -13,6 +13,8 @@ export default function Navigation() {
     { path: "/", label: "トップページ（距離比較）", icon: Home },
     { path: "/how-to", label: "使い方", icon: HelpCircle },
     { path: "/articles", label: "紹介記事", icon: Newspaper },
+    { path: "/terms", label: "利用規約", icon: FileText },
+    { path: "/privacy", label: "プライバシーポリシー", icon: Shield },
   ];
 
   return (
