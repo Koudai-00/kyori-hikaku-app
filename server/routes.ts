@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserUsageSchema, insertDistanceQuerySchema } from "@shared/schema";
+import { insertUserUsageSchema, insertDistanceQuerySchema, insertArticleSchema } from "@shared/schema";
 import { z } from "zod";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
@@ -32,7 +32,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const usage = await storage.updateUserUsage(
         data.userId, 
         data.month, 
-        data.usageCount
+        data.usageCount || 0
       );
       res.json(usage);
     } catch (error) {
