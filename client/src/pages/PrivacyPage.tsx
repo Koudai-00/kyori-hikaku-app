@@ -27,7 +27,7 @@ export default function PrivacyPage() {
 
             <h2 className="text-xl font-semibold text-gray-900 mt-8 mb-4">第3条（第三者提供）</h2>
             <p className="text-gray-700 mb-4">
-              当サービスでは、Googleなどの第三者サービス（Google Maps, Google AdSense）を通じて情報が収集される場合があります。
+              本サービスでは、Googleなどの第三者サービス（Google Maps, Google AdSense）を通じて情報が収集される場合があります。
             </p>
 
             <h2 className="text-xl font-semibold text-gray-900 mt-8 mb-4">第4条（Google AdSense について）</h2>
