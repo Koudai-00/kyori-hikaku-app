@@ -7,6 +7,7 @@ import Navigation from "@/components/Navigation";
 import HomePage from "@/pages/HomePage";
 import HowToPage from "@/pages/HowToPage";
 import ArticlesPage from "@/pages/ArticlesPage";
+import ArticleDetailPage from "@/pages/ArticleDetailPage";
 import AdminPage from "@/pages/AdminPage";
 import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/" component={HomePage} />
       <Route path="/how-to" component={HowToPage} />
       <Route path="/articles" component={ArticlesPage} />
+      <Route path="/articles/:id" component={ArticleDetailPage} />
       <Route path="/admin" component={AdminPage} />
       <Route path="/terms" component={TermsPage} />
       <Route path="/privacy" component={PrivacyPage} />

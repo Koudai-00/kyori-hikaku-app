@@ -419,6 +419,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Article API endpoints
+  
+  // Get all articles with pagination
+  app.get("/api/articles", async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      
+      const result = await storage.getAllArticles(page, limit);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching articles" });
+    }
+  });
+
+  // Get article by ID and increment views
+  app.get("/api/articles/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const article = await storage.getArticleById(id);
+      
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+
+      // Increment view count
+      await storage.updateArticleViews(id);
+      
+      res.json(article);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching article" });
+    }
+  });
+
+  // Get popular articles
+  app.get("/api/articles/popular/:limit?", async (req, res) => {
+    try {
+      const limit = parseInt(req.params.limit || "10");
+      const articles = await storage.getPopularArticles(limit);
+      res.json(articles);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching popular articles" });
+    }
+  });
+
+  // Create new article (admin only)
+  app.post("/api/articles", async (req, res) => {
+    try {
+      const { password, ...articleData } = req.body;
+      
+      if (password !== ADMIN_PASSWORD) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const data = insertArticleSchema.parse(articleData);
+      const article = await storage.createArticle(data);
+      res.status(201).json(article);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid article data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Error creating article" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

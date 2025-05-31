@@ -1,64 +1,198 @@
-import { Calendar } from "lucide-react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 
-export default function ArticlesPage() {
-  const articles = [
-    {
-      title: "Googleマップを使って複数の目的地への距離と移動時間を比較する方法",
-      date: "2024年1月15日",
-      content: [
-        "引っ越しや旅行計画、営業回りなど、複数の目的地への移動を検討する場面は日常生活でよくあります。そんな時に便利なのが、出発地から各目的地への距離と所要時間を一括で比較できるこのアプリです。",
-        "従来のGoogleマップでは一度に一つの目的地しか検索できませんでしたが、Distance Matrix APIを活用することで、複数の目的地への距離と時間を同時に取得し、比較表として表示することが可能になりました。"
-      ],
-      tags: ["Googleマップ", "距離比較", "移動時間"]
-    },
-    {
-      title: "効率的な営業回りルートの作成方法",
-      date: "2024年1月10日",
-      content: [
-        "営業活動において、複数の顧客を効率よく回るルートの作成は重要な課題です。距離比較アプリを使うことで、現在地から各顧客先への移動時間を比較し、最適な訪問順序を決定できます。"
-      ],
-      tags: ["営業効率", "ルート最適化"]
-    },
-    {
-      title: "引っ越し先候補の立地比較に活用する方法",
-      date: "2024年1月5日",
-      content: [
-        "引っ越しを検討する際、職場、学校、病院、スーパーなどへのアクセスの良さは重要な判断材料です。複数の候補物件から各施設への移動時間を比較することで、より良い立地を選択できます。"
-      ],
-      tags: ["引っ越し", "立地比較", "アクセス"]
-    }
-  ];
+interface Article {
+  id: number;
+  title: string;
+  thumbnail: string | null;
+  content: string;
+  views: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ArticlesResponse {
+  articles: Article[];
+  total: number;
+}
+
+function ArticleCard({ article }: { article: Article }) {
+  const truncatedContent = article.content.length > 120 
+    ? article.content.substring(0, 120) + "..." 
+    : article.content;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <h2 className="text-xl font-bold text-text-primary mb-6">紹介記事</h2>
+    <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+      <CardContent className="p-6">
+        <div className="flex gap-4 h-full">
+          {article.thumbnail && (
+            <img
+              src={article.thumbnail}
+              alt={article.title}
+              className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
+            />
+          )}
+          <div className="flex-1 flex flex-col justify-between min-w-0">
+            <div>
+              <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
+                {article.title}
+              </h3>
+              <p className="text-gray-600 text-sm line-clamp-3 mb-3">
+                {truncatedContent}
+              </p>
+            </div>
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                {new Date(article.createdAt).toLocaleDateString('ja-JP')}
+              </div>
+              <div className="flex items-center gap-1">
+                <Eye className="w-3 h-3" />
+                {article.views}
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Pagination({ currentPage, totalPages, onPageChange }: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    pages.push(i);
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-8">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="flex items-center gap-1"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        前へ
+      </Button>
       
-      <div className="space-y-6">
-        {articles.map((article, index) => (
-          <article key={index} className={`${index < articles.length - 1 ? 'border-b border-gray-200 pb-6' : ''}`}>
-            <h3 className="text-lg font-semibold text-text-primary mb-3">
-              {article.title}
-            </h3>
-            <div className="text-sm text-text-secondary mb-3 flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              {article.date}
-            </div>
-            <div className="space-y-4">
-              {article.content.map((paragraph, pIndex) => (
-                <p key={pIndex} className="text-text-secondary text-sm leading-relaxed">
-                  {paragraph}
-                </p>
+      {pages.map((page) => (
+        <Button
+          key={page}
+          variant={currentPage === page ? "default" : "outline"}
+          size="sm"
+          onClick={() => onPageChange(page)}
+          className="min-w-[40px]"
+        >
+          {page}
+        </Button>
+      ))}
+      
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="flex items-center gap-1"
+      >
+        次へ
+        <ChevronRight className="w-4 h-4" />
+      </Button>
+    </div>
+  );
+}
+
+export default function ArticlesPage() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const { data, isLoading, error } = useQuery<ArticlesResponse>({
+    queryKey: [`/api/articles?page=${currentPage}&limit=${itemsPerPage}`],
+  });
+
+  const totalPages = data ? Math.ceil(data.total / itemsPerPage) : 1;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="bg-white rounded-xl shadow-sm p-8">
+            <Skeleton className="h-8 w-48 mb-6" />
+            <div className="grid gap-6">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex gap-4">
+                  <Skeleton className="w-24 h-24 rounded-lg" />
+                  <div className="flex-1 space-y-3">
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </div>
               ))}
             </div>
-            <div className="flex flex-wrap gap-2 mt-4">
-              {article.tags.map((tag, tIndex) => (
-                <span key={tIndex} className="px-3 py-1 bg-gray-100 text-text-secondary text-xs rounded-full">
-                  {tag}
-                </span>
-              ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">記事を読み込めませんでした</h2>
+            <p className="text-gray-600">しばらく時間をおいてから再度お試しください。</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="bg-white rounded-xl shadow-sm p-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">紹介記事</h1>
+          <p className="text-gray-600 mb-8">距離比較アプリの使い方や活用法に関する記事をご紹介します。</p>
+          
+          {data.articles.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">まだ記事がありません。</p>
             </div>
-          </article>
-        ))}
+          ) : (
+            <>
+              <div className="grid gap-6">
+                {data.articles.map((article) => (
+                  <a
+                    key={article.id}
+                    href={`/articles/${article.id}`}
+                    className="block"
+                  >
+                    <ArticleCard article={article} />
+                  </a>
+                ))}
+              </div>
+              
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
