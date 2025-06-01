@@ -6,6 +6,7 @@ import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import express from "express";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -44,6 +45,9 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Static file serving for uploads
+  app.use('/uploads', express.static(uploadsDir));
   
   // Get user usage for current month
   app.get("/api/usage/:userId/:month", async (req, res) => {
@@ -283,9 +287,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         success: true,
-        origin: origin,
-        destination: destination,
-        routes: demoRoutes
+        origin: data.routes[0]?.legs[0]?.start_address || origin,
+        destination: data.routes[0]?.legs[0]?.end_address || req.body.destination,
+        routes: routes
       });
     }
   });
@@ -512,17 +516,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Image upload endpoints
+  app.post("/api/upload/thumbnail", upload.single('image'), (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "画像ファイルが必要です" });
+      }
+      
+      const fileUrl = `/uploads/${req.file.filename}`;
+      res.json({ url: fileUrl });
+    } catch (error) {
+      res.status(500).json({ message: "画像のアップロードに失敗しました" });
+    }
+  });
+
+  app.post("/api/upload/image", upload.single('image'), (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "画像ファイルが必要です" });
+      }
+      
+      const fileUrl = `/uploads/${req.file.filename}`;
+      res.json({ url: fileUrl });
+    } catch (error) {
+      res.status(500).json({ message: "画像のアップロードに失敗しました" });
+    }
+  });
+
   // Create new article (admin only)
   app.post("/api/articles", async (req, res) => {
     try {
-      const { password, ...articleData } = req.body;
-      
-      if (password !== ADMIN_PASSWORD) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      const data = insertArticleSchema.parse(articleData);
-      const article = await storage.createArticle(data);
+      const articleData = insertArticleSchema.parse(req.body);
+      const article = await storage.createArticle(articleData);
       res.status(201).json(article);
     } catch (error) {
       if (error instanceof z.ZodError) {
