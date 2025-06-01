@@ -287,9 +287,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         success: true,
-        origin: data.routes[0]?.legs[0]?.start_address || origin,
-        destination: data.routes[0]?.legs[0]?.end_address || req.body.destination,
-        routes: routes
+        origin: req.body.origin,
+        destination: req.body.destination,
+        routes: demoRoutes
       });
     }
   });
