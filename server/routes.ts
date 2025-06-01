@@ -557,6 +557,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update article (admin only)
+  app.put("/api/articles/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const articleData = insertArticleSchema.parse(req.body);
+      const article = await storage.updateArticle(id, articleData);
+      
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+      
+      res.json(article);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid article data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Error updating article" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

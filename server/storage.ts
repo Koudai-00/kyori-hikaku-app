@@ -21,6 +21,7 @@ export interface IStorage {
   getAllArticles(page?: number, limit?: number): Promise<{ articles: Article[], total: number }>;
   getArticleById(id: number): Promise<Article | undefined>;
   createArticle(article: InsertArticle): Promise<Article>;
+  updateArticle(id: number, article: InsertArticle): Promise<Article | undefined>;
   updateArticleViews(id: number): Promise<void>;
   getPopularArticles(limit?: number): Promise<Article[]>;
 }
@@ -141,6 +142,18 @@ export class DatabaseStorage implements IStorage {
     const [article] = await db
       .insert(articles)
       .values(insertArticle)
+      .returning();
+    return article;
+  }
+
+  async updateArticle(id: number, updateData: InsertArticle): Promise<Article | undefined> {
+    const [article] = await db
+      .update(articles)
+      .set({
+        ...updateData,
+        updatedAt: new Date(),
+      })
+      .where(eq(articles.id, id))
       .returning();
     return article;
   }

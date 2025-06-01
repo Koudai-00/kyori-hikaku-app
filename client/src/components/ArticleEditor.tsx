@@ -99,21 +99,25 @@ export default function ArticleEditor({ onSave, article, isEditing }: ArticleEdi
 
   const saveArticleMutation = useMutation({
     mutationFn: async (data: { title: string; content: string; thumbnail?: string }) => {
-      const response = await apiRequest('POST', '/api/articles', data);
+      const method = isEditing ? 'PUT' : 'POST';
+      const url = isEditing ? `/api/articles/${article.id}` : '/api/articles';
+      const response = await apiRequest(method, url, data);
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: '記事を公開しました',
-        description: '記事が正常に公開されました。',
+        title: isEditing ? '記事を更新しました' : '記事を公開しました',
+        description: isEditing ? '記事が正常に更新されました。' : '記事が正常に公開されました。',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
       setShowPreview(false);
-      setTitle('');
-      setThumbnail(null);
-      setThumbnailPreview('');
-      editor?.commands.setContent('');
-      setHtmlContent('');
+      if (!isEditing) {
+        setTitle('');
+        setThumbnail(null);
+        setThumbnailPreview('');
+        editor?.commands.setContent('');
+        setHtmlContent('');
+      }
       onSave?.();
     },
     onError: (error: any) => {
@@ -221,6 +225,16 @@ export default function ArticleEditor({ onSave, article, isEditing }: ArticleEdi
     '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080', 
     '#008000', '#FFC0CB', '#A52A2A', '#808080', '#000080'
   ];
+
+  // 編集モードの場合、既存記事データをロード
+  useEffect(() => {
+    if (isEditing && article && editor) {
+      setTitle(article.title || '');
+      setThumbnailPreview(article.thumbnail || '');
+      setHtmlContent(article.content || '');
+      editor.commands.setContent(article.content || '');
+    }
+  }, [isEditing, article, editor]);
 
   const handleSave = async () => {
     if (!title.trim()) {
