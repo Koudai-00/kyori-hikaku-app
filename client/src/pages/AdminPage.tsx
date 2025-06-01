@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AdminLogin from "@/components/AdminLogin";
 import ArticleEditor from "@/components/ArticleEditor";
-import { LogOut, FileText, BarChart3 } from "lucide-react";
+import { LogOut, FileText, BarChart3, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function AdminPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [editingArticle, setEditingArticle] = useState<any>(null);
 
   const { data: statsData, refetch } = useQuery({
     queryKey: ["/api/admin/stats"],
@@ -19,8 +20,33 @@ export default function AdminPage() {
     enabled: isLoggedIn,
   });
 
+  const { data: articlesData, refetch: refetchArticles } = useQuery({
+    queryKey: ["/api/articles"],
+    queryFn: async () => {
+      const response = await fetch("/api/articles?limit=100");
+      if (!response.ok) throw new Error("Failed to fetch articles");
+      return response.json();
+    },
+    enabled: isLoggedIn,
+  });
+
   const handleLogin = () => {
     setIsLoggedIn(true);
+    refetch();
+    refetchArticles();
+  };
+
+  const handleEditArticle = (article: any) => {
+    setEditingArticle(article);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingArticle(null);
+  };
+
+  const handleUpdateComplete = () => {
+    setEditingArticle(null);
+    refetchArticles();
     refetch();
   };
 
@@ -48,14 +74,18 @@ export default function AdminPage() {
       </div>
       
       <Tabs defaultValue="stats" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="stats" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             統計情報
           </TabsTrigger>
           <TabsTrigger value="articles" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            記事管理
+            記事投稿
+          </TabsTrigger>
+          <TabsTrigger value="articleList" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            記事一覧
           </TabsTrigger>
         </TabsList>
         
@@ -125,7 +155,82 @@ export default function AdminPage() {
         </TabsContent>
         
         <TabsContent value="articles" className="mt-6">
-          <ArticleEditor onSave={() => refetch()} />
+          {editingArticle ? (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">記事編集</h3>
+                <Button variant="outline" onClick={handleCancelEdit}>
+                  編集を中止
+                </Button>
+              </div>
+              <ArticleEditor 
+                article={editingArticle} 
+                onSave={handleUpdateComplete} 
+                isEditing={true}
+              />
+            </div>
+          ) : (
+            <ArticleEditor onSave={() => refetch()} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="articleList" className="mt-6">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-text-primary mb-4">記事一覧</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">
+                      記事タイトル
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">
+                      公開日
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">
+                      最終更新日
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">
+                      操作
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {articlesData?.articles?.map((article: any) => (
+                    <tr key={article.id}>
+                      <td className="px-4 py-3 text-text-primary font-medium">
+                        {article.title}
+                      </td>
+                      <td className="px-4 py-3 text-text-secondary">
+                        {new Date(article.createdAt).toLocaleDateString('ja-JP')}
+                      </td>
+                      <td className="px-4 py-3 text-text-secondary">
+                        {new Date(article.updatedAt).toLocaleDateString('ja-JP')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditArticle(article)}
+                          className="flex items-center gap-1"
+                        >
+                          <Edit className="h-3 w-3" />
+                          編集
+                        </Button>
+                      </td>
+                    </tr>
+                  )) || []}
+                  {(!articlesData?.articles || articlesData.articles.length === 0) && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-text-secondary">
+                        記事がありません
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

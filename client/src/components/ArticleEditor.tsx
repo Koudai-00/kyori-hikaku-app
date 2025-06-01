@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -39,9 +39,11 @@ import {
 
 interface ArticleEditorProps {
   onSave?: () => void;
+  article?: any;
+  isEditing?: boolean;
 }
 
-export default function ArticleEditor({ onSave }: ArticleEditorProps) {
+export default function ArticleEditor({ onSave, article, isEditing }: ArticleEditorProps) {
   const [title, setTitle] = useState('');
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
