@@ -47,6 +47,10 @@ export default function AdminPage() {
   const handleEditArticle = (article: any) => {
     setEditingArticle(article);
     setActiveTab("articles");
+    // ページトップにスクロール
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   };
 
   const handleCancelEdit = () => {
