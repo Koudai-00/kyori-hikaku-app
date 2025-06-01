@@ -293,91 +293,124 @@ export default function ArticleEditor({ onSave }: ArticleEditorProps) {
           </div>
         </div>
 
-        {/* エディターツールバー */}
-        <div className="border-b pb-3">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant={editor.isActive('bold') ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => editor.chain().focus().toggleBold().run()}
-            >
-              <Bold className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant={editor.isActive('italic') ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => editor.chain().focus().toggleItalic().run()}
-            >
-              <Italic className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant={editor.isActive('bulletList') ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => editor.chain().focus().toggleBulletList().run()}
-            >
-              <List className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant={editor.isActive('orderedList') ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            >
-              <ListOrdered className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant={editor.isActive('blockquote') ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            >
-              <Quote className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleImageUpload}
-              disabled={uploadImageMutation.isPending}
-            >
-              <ImageIcon className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addLink}
-            >
-              <LinkIcon className="h-4 w-4" />
-            </Button>
-            <div className="h-6 w-px bg-gray-300 mx-1" />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => editor.chain().focus().undo().run()}
-              disabled={!editor.can().undo()}
-            >
-              <Undo className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => editor.chain().focus().redo().run()}
-              disabled={!editor.can().redo()}
-            >
-              <Redo className="h-4 w-4" />
-            </Button>
-          </div>
+        {/* HTML編集モード切り替えとプレビューボタン */}
+        <div className="flex justify-between items-center mb-4">
+          <Button
+            type="button"
+            variant={isHtmlMode ? 'default' : 'outline'}
+            onClick={toggleHtmlMode}
+            className="flex items-center gap-2"
+          >
+            <Code className="h-4 w-4" />
+            HTML編集モード
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowPreview(true)}
+            className="flex items-center gap-2"
+          >
+            <Eye className="h-4 w-4" />
+            プレビュー
+          </Button>
         </div>
+
+        {/* エディターツールバー */}
+        {!isHtmlMode && (
+          <div className="border-b pb-3 mb-4">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={editor.isActive('bold') ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => editor.chain().focus().toggleBold().run()}
+              >
+                <Bold className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant={editor.isActive('italic') ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => editor.chain().focus().toggleItalic().run()}
+              >
+                <Italic className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant={editor.isActive('bulletList') ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => editor.chain().focus().toggleBulletList().run()}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant={editor.isActive('orderedList') ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => editor.chain().focus().toggleOrderedList().run()}
+              >
+                <ListOrdered className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant={editor.isActive('blockquote') ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => editor.chain().focus().toggleBlockquote().run()}
+              >
+                <Quote className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleImageUpload}
+                disabled={uploadImageMutation.isPending}
+              >
+                <ImageIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addLink}
+              >
+                <LinkIcon className="h-4 w-4" />
+              </Button>
+              <div className="h-6 w-px bg-gray-300 mx-1" />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => editor.chain().focus().undo().run()}
+                disabled={!editor.can().undo()}
+              >
+                <Undo className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => editor.chain().focus().redo().run()}
+                disabled={!editor.can().redo()}
+              >
+                <Redo className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* エディター */}
         <div className="border rounded-lg min-h-[400px]">
-          <EditorContent editor={editor} />
+          {isHtmlMode ? (
+            <Textarea
+              value={htmlContent}
+              onChange={(e) => handleHtmlContentChange(e.target.value)}
+              className="min-h-[400px] font-mono text-sm border-0 resize-none focus:ring-0"
+              placeholder="<p>HTMLコードを直接編集できます...</p>"
+            />
+          ) : (
+            <EditorContent editor={editor} />
+          )}
         </div>
 
         {/* 保存ボタン */}
@@ -395,11 +428,136 @@ export default function ArticleEditor({ onSave }: ArticleEditorProps) {
             ) : (
               <div className="flex items-center gap-2">
                 <Save className="h-4 w-4" />
-                記事を保存
+                記事を公開
               </div>
             )}
           </Button>
         </div>
+
+        {/* プレビューモーダル */}
+        <Dialog open={showPreview} onOpenChange={setShowPreview}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>記事プレビュー</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <h1 className="text-3xl font-bold">{title || 'タイトルなし'}</h1>
+                {thumbnailPreview && (
+                  <img 
+                    src={thumbnailPreview} 
+                    alt="サムネイル" 
+                    className="mt-4 max-w-full h-auto rounded-lg"
+                  />
+                )}
+              </div>
+              <div 
+                className="prose prose-lg max-w-none"
+                dangerouslySetInnerHTML={{ 
+                  __html: isHtmlMode ? htmlContent : editor?.getHTML() || '' 
+                }}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* 文字装飾パネル（浮動） */}
+        {!isHtmlMode && (
+          <>
+            {/* 文字装飾ボタン */}
+            <Button
+              type="button"
+              className="fixed bottom-4 right-4 z-50 rounded-full w-12 h-12 p-0"
+              onClick={() => setShowStylePanel(!showStylePanel)}
+            >
+              <Palette className="h-6 w-6" />
+            </Button>
+
+            {/* 文字装飾パネル */}
+            {showStylePanel && (
+              <div className="fixed bottom-16 left-0 right-0 z-40 bg-white border-t shadow-lg p-4">
+                <div className="max-w-4xl mx-auto">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold">文字装飾</h3>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowStylePanel(false)}
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* 見出し */}
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">見出し</Label>
+                      <div className="flex gap-1">
+                        <Button
+                          type="button"
+                          variant={editor?.isActive('heading', { level: 1 }) ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+                        >
+                          <Heading1 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={editor?.isActive('heading', { level: 2 }) ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+                        >
+                          <Heading2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={editor?.isActive('heading', { level: 3 }) ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+                        >
+                          <Heading3 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* 文字色 */}
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">文字色</Label>
+                      <div className="grid grid-cols-5 gap-1">
+                        {colors.map((color) => (
+                          <button
+                            key={color}
+                            type="button"
+                            className="w-6 h-6 rounded border-2 border-gray-300 hover:border-gray-500"
+                            style={{ backgroundColor: color }}
+                            onClick={() => setTextColor(color)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 背景色 */}
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">背景色</Label>
+                      <div className="grid grid-cols-5 gap-1">
+                        {colors.map((color) => (
+                          <button
+                            key={color}
+                            type="button"
+                            className="w-6 h-6 rounded border-2 border-gray-300 hover:border-gray-500"
+                            style={{ backgroundColor: color }}
+                            onClick={() => setBackgroundColor(color)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </CardContent>
     </Card>
   );
