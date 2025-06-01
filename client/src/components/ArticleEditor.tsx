@@ -2,10 +2,15 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
+import TextStyle from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
+import Highlight from '@tiptap/extension-highlight';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -20,7 +25,15 @@ import {
   Redo, 
   Image as ImageIcon,
   Link as LinkIcon,
-  Save
+  Save,
+  Eye,
+  Code,
+  Palette,
+  ChevronUp,
+  ChevronDown,
+  Heading1,
+  Heading2,
+  Heading3
 } from 'lucide-react';
 
 interface ArticleEditorProps {
@@ -31,6 +44,10 @@ export default function ArticleEditor({ onSave }: ArticleEditorProps) {
   const [title, setTitle] = useState('');
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
+  const [showPreview, setShowPreview] = useState(false);
+  const [isHtmlMode, setIsHtmlMode] = useState(false);
+  const [htmlContent, setHtmlContent] = useState('');
+  const [showStylePanel, setShowStylePanel] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -38,6 +55,11 @@ export default function ArticleEditor({ onSave }: ArticleEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit,
+      TextStyle,
+      Color,
+      Highlight.configure({
+        multicolor: true,
+      }),
       Image.configure({
         HTMLAttributes: {
           class: 'max-w-full h-auto rounded-lg',
@@ -55,6 +77,11 @@ export default function ArticleEditor({ onSave }: ArticleEditorProps) {
       attributes: {
         class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[300px] p-4',
       },
+    },
+    onUpdate: ({ editor }) => {
+      if (!isHtmlMode) {
+        setHtmlContent(editor.getHTML());
+      }
     },
   });
 
@@ -148,6 +175,39 @@ export default function ArticleEditor({ onSave }: ArticleEditorProps) {
     }
   };
 
+  const toggleHtmlMode = () => {
+    if (isHtmlMode) {
+      // HTML モードから通常モードへ
+      editor?.commands.setContent(htmlContent);
+      setIsHtmlMode(false);
+    } else {
+      // 通常モードからHTML モードへ
+      setHtmlContent(editor?.getHTML() || '');
+      setIsHtmlMode(true);
+    }
+  };
+
+  const handleHtmlContentChange = (value: string) => {
+    setHtmlContent(value);
+    if (isHtmlMode) {
+      editor?.commands.setContent(value);
+    }
+  };
+
+  const setTextColor = (color: string) => {
+    editor?.chain().focus().setColor(color).run();
+  };
+
+  const setBackgroundColor = (color: string) => {
+    editor?.chain().focus().setHighlight({ color }).run();
+  };
+
+  const colors = [
+    '#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', 
+    '#FF00FF', '#00FFFF', '#FFA500', '#800080', '#008000',
+    '#FFC0CB', '#A52A2A', '#808080', '#000080', '#800000'
+  ];
+
   const handleSave = async () => {
     if (!title.trim()) {
       toast({
@@ -158,7 +218,7 @@ export default function ArticleEditor({ onSave }: ArticleEditorProps) {
       return;
     }
 
-    const content = editor?.getHTML() || '';
+    const content = isHtmlMode ? htmlContent : editor?.getHTML() || '';
     let thumbnailUrl = '';
 
     if (thumbnail) {
