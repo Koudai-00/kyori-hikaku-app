@@ -5,6 +5,7 @@ import Link from '@tiptap/extension-link';
 import TextStyle from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import Highlight from '@tiptap/extension-highlight';
+import Placeholder from '@tiptap/extension-placeholder';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -71,8 +72,11 @@ export default function ArticleEditor({ onSave }: ArticleEditorProps) {
           class: 'text-blue-600 underline',
         },
       }),
+      Placeholder.configure({
+        placeholder: 'ここに記事の内容を入力してください...',
+      }),
     ],
-    content: '<p>ここに記事の内容を入力してください...</p>',
+    content: '',
     editorProps: {
       attributes: {
         class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[300px] p-4',
@@ -489,67 +493,151 @@ export default function ArticleEditor({ onSave }: ArticleEditorProps) {
                     </Button>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* 見出し */}
+                  <div className="space-y-6">
+                    {/* 基本編集機能 */}
                     <div>
-                      <Label className="text-sm font-medium mb-2 block">見出し</Label>
-                      <div className="flex gap-1">
+                      <Label className="text-sm font-medium mb-2 block">基本編集</Label>
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           type="button"
-                          variant={editor?.isActive('heading', { level: 1 }) ? 'default' : 'outline'}
+                          variant={editor?.isActive('bold') ? 'default' : 'outline'}
                           size="sm"
-                          onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+                          onClick={() => editor?.chain().focus().toggleBold().run()}
                         >
-                          <Heading1 className="h-4 w-4" />
+                          <Bold className="h-4 w-4" />
                         </Button>
                         <Button
                           type="button"
-                          variant={editor?.isActive('heading', { level: 2 }) ? 'default' : 'outline'}
+                          variant={editor?.isActive('italic') ? 'default' : 'outline'}
                           size="sm"
-                          onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+                          onClick={() => editor?.chain().focus().toggleItalic().run()}
                         >
-                          <Heading2 className="h-4 w-4" />
+                          <Italic className="h-4 w-4" />
                         </Button>
                         <Button
                           type="button"
-                          variant={editor?.isActive('heading', { level: 3 }) ? 'default' : 'outline'}
+                          variant={editor?.isActive('bulletList') ? 'default' : 'outline'}
                           size="sm"
-                          onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+                          onClick={() => editor?.chain().focus().toggleBulletList().run()}
                         >
-                          <Heading3 className="h-4 w-4" />
+                          <List className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={editor?.isActive('orderedList') ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+                        >
+                          <ListOrdered className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={editor?.isActive('blockquote') ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+                        >
+                          <Quote className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleImageUpload}
+                          disabled={uploadImageMutation.isPending}
+                        >
+                          <ImageIcon className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addLink}
+                        >
+                          <LinkIcon className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => editor?.chain().focus().undo().run()}
+                          disabled={!editor?.can().undo()}
+                        >
+                          <Undo className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => editor?.chain().focus().redo().run()}
+                          disabled={!editor?.can().redo()}
+                        >
+                          <Redo className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
 
-                    {/* 文字色 */}
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">文字色</Label>
-                      <div className="grid grid-cols-5 gap-1">
-                        {colors.map((color) => (
-                          <button
-                            key={color}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* 見出し */}
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">見出し</Label>
+                        <div className="flex gap-1">
+                          <Button
                             type="button"
-                            className="w-6 h-6 rounded border-2 border-gray-300 hover:border-gray-500"
-                            style={{ backgroundColor: color }}
-                            onClick={() => setTextColor(color)}
-                          />
-                        ))}
+                            variant={editor?.isActive('heading', { level: 1 }) ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+                          >
+                            <Heading1 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={editor?.isActive('heading', { level: 2 }) ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+                          >
+                            <Heading2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={editor?.isActive('heading', { level: 3 }) ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+                          >
+                            <Heading3 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* 背景色 */}
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">背景色</Label>
-                      <div className="grid grid-cols-5 gap-1">
-                        {colors.map((color) => (
-                          <button
-                            key={color}
-                            type="button"
-                            className="w-6 h-6 rounded border-2 border-gray-300 hover:border-gray-500"
-                            style={{ backgroundColor: color }}
-                            onClick={() => setBackgroundColor(color)}
-                          />
-                        ))}
+                      {/* 文字色 */}
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">文字色</Label>
+                        <div className="grid grid-cols-5 gap-1">
+                          {colors.map((color) => (
+                            <button
+                              key={color}
+                              type="button"
+                              className="w-6 h-6 rounded border-2 border-gray-300 hover:border-gray-500"
+                              style={{ backgroundColor: color }}
+                              onClick={() => setTextColor(color)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 背景色 */}
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">背景色</Label>
+                        <div className="grid grid-cols-5 gap-1">
+                          {colors.map((color) => (
+                            <button
+                              key={color}
+                              type="button"
+                              className="w-6 h-6 rounded border-2 border-gray-300 hover:border-gray-500"
+                              style={{ backgroundColor: color }}
+                              onClick={() => setBackgroundColor(color)}
+                            />
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
