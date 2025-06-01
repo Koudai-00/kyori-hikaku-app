@@ -14,6 +14,7 @@ export default function AdminPage() {
   const [editingArticle, setEditingArticle] = useState<any>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("stats");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -45,16 +46,19 @@ export default function AdminPage() {
 
   const handleEditArticle = (article: any) => {
     setEditingArticle(article);
+    setActiveTab("post");
   };
 
   const handleCancelEdit = () => {
     setEditingArticle(null);
+    setActiveTab("articles");
   };
 
   const handleUpdateComplete = () => {
     setEditingArticle(null);
     refetchArticles();
     refetch();
+    setActiveTab("articles");
   };
 
   const handleDeleteClick = (article: any) => {
@@ -121,7 +125,7 @@ export default function AdminPage() {
         </Button>
       </div>
       
-      <Tabs defaultValue="stats" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="stats" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
