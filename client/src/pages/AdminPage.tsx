@@ -46,19 +46,19 @@ export default function AdminPage() {
 
   const handleEditArticle = (article: any) => {
     setEditingArticle(article);
-    setActiveTab("post");
+    setActiveTab("articles");
   };
 
   const handleCancelEdit = () => {
     setEditingArticle(null);
-    setActiveTab("articles");
+    setActiveTab("articleList");
   };
 
   const handleUpdateComplete = () => {
     setEditingArticle(null);
     refetchArticles();
     refetch();
-    setActiveTab("articles");
+    setActiveTab("articleList");
   };
 
   const handleDeleteClick = (article: any) => {
