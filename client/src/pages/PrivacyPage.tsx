@@ -35,7 +35,15 @@ export default function PrivacyPage() {
               GoogleはCookie等を使用し、ユーザーの興味に基づいた広告を表示します。Cookieの利用はGoogleの広告ポリシーに従います。
             </p>
 
-            <h2 className="text-xl font-semibold text-gray-900 mt-8 mb-4">第5条（プライバシーポリシーの変更）</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mt-8 mb-4">第5条（Googleアナリティクスについて）</h2>
+            <p className="text-gray-700 mb-4">
+              当サイトでは、Googleのアクセス解析ツール「Googleアナリティクス」を使用しています。Googleアナリティクスは、Cookieを使用してデータを収集しますが、このデータは匿名化されており、個人が特定されることはありません。
+            </p>
+            <p className="text-gray-700 mb-4">
+              Cookieを無効にすることでデータ収集を拒否できますので、使用ブラウザの設定を確認してください。詳細については、Googleアナリティクス利用規約やGoogleポリシー、規約ページをご参照ください。
+            </p>
+
+            <h2 className="text-xl font-semibold text-gray-900 mt-8 mb-4">第6条（プライバシーポリシーの変更）</h2>
             <p className="text-gray-700 mb-4">
               本ポリシーは、法令変更またはサービス改善に伴い随時変更することがあります。
             </p>
