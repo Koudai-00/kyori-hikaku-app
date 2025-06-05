@@ -7,6 +7,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import express from "express";
+import sharp from "sharp";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -517,17 +518,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Image upload endpoints
-  app.post("/api/upload/thumbnail", upload.single('image'), (req, res) => {
+  app.post("/api/upload/thumbnail", upload.single('image'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "画像ファイルが必要です" });
       }
       
-      // 画像をBase64形式に変換
-      const imageBuffer = fs.readFileSync(req.file.path);
-      const base64Image = `data:${req.file.mimetype};base64,${imageBuffer.toString('base64')}`;
+      // 画像を圧縮・リサイズ（サムネイル用: 最大400x300px、品質80%）
+      const compressedBuffer = await sharp(req.file.path)
+        .resize(400, 300, { 
+          fit: 'inside',
+          withoutEnlargement: true 
+        })
+        .jpeg({ quality: 80 })
+        .toBuffer();
       
-      // アップロードされたファイルを削除（データベースに保存するため）
+      const base64Image = `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
+      
+      // 元ファイルを削除
       fs.unlinkSync(req.file.path);
       
       res.json({ url: base64Image });
@@ -537,17 +545,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/upload/image", upload.single('image'), (req, res) => {
+  app.post("/api/upload/image", upload.single('image'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "画像ファイルが必要です" });
       }
       
-      // 画像をBase64形式に変換
-      const imageBuffer = fs.readFileSync(req.file.path);
-      const base64Image = `data:${req.file.mimetype};base64,${imageBuffer.toString('base64')}`;
+      // 画像を圧縮・リサイズ（記事内画像: 最大800x600px、品質85%）
+      const compressedBuffer = await sharp(req.file.path)
+        .resize(800, 600, { 
+          fit: 'inside',
+          withoutEnlargement: true 
+        })
+        .jpeg({ quality: 85 })
+        .toBuffer();
       
-      // アップロードされたファイルを削除（データベースに保存するため）
+      const base64Image = `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
+      
+      // 元ファイルを削除
       fs.unlinkSync(req.file.path);
       
       res.json({ url: base64Image });
