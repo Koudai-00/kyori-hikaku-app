@@ -12,8 +12,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
 const FRONTEND_GOOGLE_MAPS_API_KEY = "AIzaSyDV-CnRnVjrMhv6-hAFFJgq7Qx_ze2S4FA";
 
-// アップロードディレクトリの設定
-const uploadsDir = path.join(process.cwd(), 'uploads');
+// アップロードディレクトリの設定（永続ストレージ）
+const uploadsDir = path.join(process.cwd(), 'persistent_uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -627,7 +627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 記事ページを追加
       articlesData.articles.forEach(article => {
-        const articleDate = new Date(article.updatedAt).toISOString();
+        const articleDate = article.updatedAt ? new Date(article.updatedAt as string | number | Date).toISOString() : currentDate;
         sitemapXml += `
   <url>
     <loc>${baseUrl}/articles/${article.id}</loc>
