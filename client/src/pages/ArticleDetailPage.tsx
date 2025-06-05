@@ -60,6 +60,10 @@ export default function ArticleDetailPage() {
     queryKey: ["/api/articles/popular/10"],
   });
 
+  // 型安全性のための型アサーション
+  const typedArticle = article as Article | undefined;
+  const typedPopularArticles = popularArticles as Article[];
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
@@ -102,7 +106,7 @@ export default function ArticleDetailPage() {
     );
   }
 
-  if (error || !article) {
+  if (error || !typedArticle) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-4xl mx-auto px-4 text-center">
@@ -125,25 +129,25 @@ export default function ArticleDetailPage() {
               {/* Article Header */}
               <header className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-900 mb-4">
-                  {article.title}
+                  {typedArticle.title}
                 </h1>
                 
                 <div className="flex items-center gap-4 text-sm text-gray-500 mb-6">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
-                    {new Date(article.createdAt).toLocaleDateString('ja-JP')}
+                    {new Date(typedArticle.createdAt).toLocaleDateString('ja-JP')}
                   </div>
                   <div className="flex items-center gap-1">
                     <Eye className="w-4 h-4" />
-                    {article.views} 回閲覧
+                    {typedArticle.views} 回閲覧
                   </div>
                 </div>
 
-                {article.thumbnail && (
+                {typedArticle.thumbnail && (
                   <div className="w-full aspect-video mb-6">
                     <img
-                      src={article.thumbnail}
-                      alt={article.title}
+                      src={typedArticle.thumbnail}
+                      alt={typedArticle.title}
                       className="w-full h-full object-cover rounded-lg"
                     />
                   </div>
@@ -154,7 +158,7 @@ export default function ArticleDetailPage() {
               <div className="prose prose-gray max-w-none">
                 <div
                   className="text-gray-700 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, '<br>') }}
+                  dangerouslySetInnerHTML={{ __html: typedArticle.content.replace(/\n/g, '<br>') }}
                 />
               </div>
             </div>
@@ -169,7 +173,7 @@ export default function ArticleDetailPage() {
               </h2>
               
               <div className="space-y-0">
-                {popularArticles.slice(0, 10).map((popularArticle: Article) => (
+                {typedPopularArticles.slice(0, 10).map((popularArticle: Article) => (
                   <a 
                     key={popularArticle.id} 
                     href={`/articles/${popularArticle.id}`}
