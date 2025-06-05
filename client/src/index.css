@@ -32,6 +32,22 @@
   --neutral: 0 0% 96%; /* #F5F5F5 */
 }
 
+/* 記事本文内の画像をレスポンシブ対応 */
+.prose img {
+  width: 100% !important;
+  height: auto !important;
+  object-fit: cover;
+  border-radius: 0.5rem;
+}
+
+/* エディターコンテンツ内の画像もレスポンシブ対応 */
+.ProseMirror img {
+  max-width: 100% !important;
+  height: auto !important;
+  object-fit: cover;
+  border-radius: 0.5rem;
+}
+
 .dark {
   --background: 240 10% 4%;
   --foreground: 0 0% 98%;

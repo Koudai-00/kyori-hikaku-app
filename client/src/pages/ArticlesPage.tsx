@@ -38,11 +38,13 @@ function ArticleCard({ article }: { article: Article }) {
       <CardContent className="p-6">
         <div className="flex gap-4 h-full">
           {article.thumbnail && (
-            <img
-              src={article.thumbnail}
-              alt={article.title}
-              className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
-            />
+            <div className="w-24 h-24 flex-shrink-0">
+              <img
+                src={article.thumbnail}
+                alt={article.title}
+                className="w-full h-full object-cover rounded-lg"
+              />
+            </div>
           )}
           <div className="flex-1 flex flex-col justify-between min-w-0">
             <div>

@@ -140,11 +140,13 @@ export default function ArticleDetailPage() {
                 </div>
 
                 {article.thumbnail && (
-                  <img
-                    src={article.thumbnail}
-                    alt={article.title}
-                    className="w-full h-64 object-cover rounded-lg mb-6"
-                  />
+                  <div className="w-full aspect-video mb-6">
+                    <img
+                      src={article.thumbnail}
+                      alt={article.title}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                  </div>
                 )}
               </header>
 
