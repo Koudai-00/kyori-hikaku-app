@@ -28,6 +28,7 @@ import {
   Link as LinkIcon,
   Save,
   Eye,
+  X,
   Code,
   Palette,
   ChevronUp,
@@ -173,6 +174,19 @@ export default function ArticleEditor({ onSave, article, isEditing }: ArticleEdi
     }
   };
 
+  const handleRemoveThumbnail = () => {
+    setThumbnail(null);
+    setThumbnailPreview('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    
+    toast({
+      title: 'サムネイルを削除しました',
+      description: '記事を保存すると削除が確定されます。',
+    });
+  };
+
   const handleImageUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -247,8 +261,9 @@ export default function ArticleEditor({ onSave, article, isEditing }: ArticleEdi
     }
 
     const content = isHtmlMode ? htmlContent : editor?.getHTML() || '';
-    let thumbnailUrl = '';
+    let thumbnailUrl = thumbnailPreview || '';
 
+    // 新しいサムネイル画像がアップロードされた場合のみアップロード処理
     if (thumbnail) {
       try {
         const formData = new FormData();
@@ -310,12 +325,22 @@ export default function ArticleEditor({ onSave, article, isEditing }: ArticleEdi
               className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
             {thumbnailPreview && (
-              <div className="mt-2">
+              <div className="mt-2 relative inline-block">
                 <img 
                   src={thumbnailPreview} 
                   alt="サムネイルプレビュー" 
                   className="max-w-xs h-auto rounded-lg border"
                 />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleRemoveThumbnail}
+                  className="absolute top-2 right-2 h-8 w-8 p-0 rounded-full"
+                  title="サムネイル画像を削除"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             )}
           </div>
