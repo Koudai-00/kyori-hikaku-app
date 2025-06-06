@@ -6,6 +6,12 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
+// 日本語コンテンツ用のヘッダー設定
+app.use((req, res, next) => {
+  res.setHeader('Content-Language', 'ja');
+  next();
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
