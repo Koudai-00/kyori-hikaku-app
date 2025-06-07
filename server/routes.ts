@@ -62,6 +62,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.sendFile(path.join(process.cwd(), 'robots.txt'));
   });
   
+  // 動的sitemap.xmlの生成と配信
+  app.get('/sitemap.xml', async (req, res) => {
+    try {
+      res.type('application/xml');
+      
+      // 基本ページ
+      const baseUrls = [
+        { loc: 'https://hikaku-map.com/', lastmod: '2025-06-07', changefreq: 'weekly', priority: '1.0' },
+        { loc: 'https://hikaku-map.com/articles', lastmod: '2025-06-07', changefreq: 'daily', priority: '0.8' },
+        { loc: 'https://hikaku-map.com/how-to', lastmod: '2025-06-07', changefreq: 'monthly', priority: '0.7' },
+        { loc: 'https://hikaku-map.com/privacy', lastmod: '2025-06-07', changefreq: 'yearly', priority: '0.3' },
+        { loc: 'https://hikaku-map.com/terms', lastmod: '2025-06-07', changefreq: 'yearly', priority: '0.3' }
+      ];
+      
+      // 記事ページを動的に追加
+      const { articles } = await storage.getAllArticles(1, 1000); // 全記事を取得
+      const articleUrls = articles.map(article => ({
+        loc: `https://hikaku-map.com/articles/${article.id}`,
+        lastmod: new Date(article.updatedAt).toISOString().split('T')[0],
+        changefreq: 'monthly',
+        priority: '0.6'
+      }));
+      
+      const allUrls = [...baseUrls, ...articleUrls];
+      
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${allUrls.map(url => `  <url>
+    <loc>${url.loc}</loc>
+    <lastmod>${url.lastmod}</lastmod>
+    <changefreq>${url.changefreq}</changefreq>
+    <priority>${url.priority}</priority>
+  </url>`).join('\n')}
+</urlset>`;
+      
+      res.send(sitemap);
+    } catch (error) {
+      console.error('Error generating sitemap:', error);
+      // フォールバック: 静的sitemapを配信
+      res.sendFile(path.join(process.cwd(), 'sitemap.xml'));
+    }
+  });
+  
   // Get user usage for current month
   app.get("/api/usage/:userId/:month", async (req, res) => {
     try {
