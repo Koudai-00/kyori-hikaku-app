@@ -132,17 +132,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-          <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-            <Info className="h-5 w-5" />
-            便利な機能
-          </h4>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• 比較結果をコピーしてスプレッドシートに貼り付けできます</li>
-            <li>• 月3回まで無料で利用できます</li>
-            <li>• 制限後は広告視聴で継続利用可能です</li>
-          </ul>
-        </div>
+
       </div>
     </div>
   );
