@@ -56,6 +56,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.sendFile(path.join(process.cwd(), 'ads.txt'));
   });
   
+  // robots.txtファイルの配信
+  app.get('/robots.txt', (req, res) => {
+    res.type('text/plain');
+    res.sendFile(path.join(process.cwd(), 'robots.txt'));
+  });
+  
   // Get user usage for current month
   app.get("/api/usage/:userId/:month", async (req, res) => {
     try {
