@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -130,6 +130,64 @@ export default function ArticlesPage() {
   });
 
   const totalPages = data ? Math.ceil(data.total / itemsPerPage) : 1;
+
+  // 記事一覧ページの構造化データを追加してSEOを改善
+  useEffect(() => {
+    if (data?.articles) {
+      // 既存の構造化データスクリプトを削除
+      const existingScript = document.querySelector('script[type="application/ld+json"]');
+      if (existingScript) {
+        existingScript.remove();
+      }
+
+      // 記事一覧ページ用の構造化データを作成
+      const structuredData = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": "記事一覧 - 距離比較アプリ",
+        "description": "距離比較アプリの最新記事一覧。地図や距離計算、ルート検索に関する便利な情報をお届けします。",
+        "url": "https://hikaku-map.com/articles",
+        "mainEntity": {
+          "@type": "ItemList",
+          "itemListElement": data.articles.map((article, index) => ({
+            "@type": "ListItem",
+            "position": index + 1 + (currentPage - 1) * itemsPerPage,
+            "item": {
+              "@type": "Article",
+              "headline": article.title,
+              "description": article.content.substring(0, 155).replace(/<[^>]*>/g, ''),
+              "image": article.thumbnail || undefined,
+              "datePublished": new Date(article.createdAt).toISOString(),
+              "dateModified": new Date(article.updatedAt || article.createdAt).toISOString(),
+              "url": `https://hikaku-map.com/articles/${article.id}`,
+              "author": {
+                "@type": "Organization",
+                "name": "距離比較アプリ"
+              }
+            }
+          }))
+        },
+        "provider": {
+          "@type": "Organization",
+          "name": "距離比較アプリ"
+        }
+      };
+
+      // 構造化データスクリプトをheadに追加
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.textContent = JSON.stringify(structuredData);
+      document.head.appendChild(script);
+
+      // ページタイトルを更新
+      document.title = `記事一覧${currentPage > 1 ? ` - ${currentPage}ページ目` : ''} | 距離比較アプリ`;
+    }
+
+    return () => {
+      // クリーンアップ時にページタイトルを元に戻す
+      document.title = '距離比較アプリ - 複数の目的地への距離・時間を一括比較';
+    };
+  }, [data, currentPage]);
 
   if (isLoading) {
     return (
