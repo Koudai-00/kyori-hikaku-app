@@ -798,26 +798,36 @@ ${allUrls.map(url => `  <url>
       const userTrackingPath = path.join(process.cwd(), 'client/src/lib/userTracking.ts');
       
       let content = fs.readFileSync(userTrackingPath, 'utf8');
+      console.log('Current file content:', content.substring(content.indexOf('TEST_USER_IDS'), content.indexOf('TEST_USER_IDS') + 200));
       
       const isCurrentlyTestMode = !content.includes("'user_1747983273983_rsdgkwozg'");
+      console.log('Currently in test mode:', isCurrentlyTestMode);
       
       if (isCurrentlyTestMode) {
-        // Switch to production mode (apply limits)
+        // Switch to production mode (apply limits) - uncomment the user ID
+        const beforeReplace = content;
         content = content.replace(
-          /\/\/ 'user_1747983273983_rsdgkwozg', \/\/ Temporarily removed for ad testing/,
-          "'user_1747983273983_rsdgkwozg', // Admin test user"
+          "  // 'user_1747983273983_rsdgkwozg', // Temporarily removed for ad testing",
+          "  'user_1747983273983_rsdgkwozg', // Admin test user"
         );
+        console.log('Replacement attempted (test->prod):', beforeReplace !== content);
       } else {
-        // Switch to test mode (exclude from limits)
+        // Switch to test mode (exclude from limits) - comment out the user ID
+        const beforeReplace = content;
         content = content.replace(
-          /'user_1747983273983_rsdgkwozg', \/\/ Admin test user/,
-          "// 'user_1747983273983_rsdgkwozg', // Temporarily removed for ad testing"
+          "  'user_1747983273983_rsdgkwozg', // Admin test user",
+          "  // 'user_1747983273983_rsdgkwozg', // Temporarily removed for ad testing"
         );
+        console.log('Replacement attempted (prod->test):', beforeReplace !== content);
       }
       
       fs.writeFileSync(userTrackingPath, content, 'utf8');
+      console.log('File written successfully');
       
-      const newMode = !isCurrentlyTestMode;
+      // Re-read to verify the change
+      const verifyContent = fs.readFileSync(userTrackingPath, 'utf8');
+      const newMode = !verifyContent.includes("'user_1747983273983_rsdgkwozg'");
+      console.log('Verified new mode (test mode):', newMode);
       
       res.json({ 
         success: true,
