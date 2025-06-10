@@ -19,28 +19,55 @@ export default function AdModal({ isOpen, onClose, onComplete }: AdModalProps) {
       setCountdown(30);
       setIsCountdownActive(true);
       
-      // Zucks Ad Network広告の読み込み
-      const script = document.createElement('script');
-      script.type = 'text/javascript';
-      script.src = 'https://j.zucks.net.zimg.jp/j?f=693608';
-      script.async = true;
-      
-      // スクリプトが読み込まれた後の処理
-      script.onload = () => {
-        console.log('Zucks Ad Network script loaded');
-      };
-      
-      script.onerror = () => {
-        console.error('Failed to load Zucks Ad Network script');
-      };
-      
-      document.head.appendChild(script);
-      
-      // クリーンアップ: モーダルが閉じられた時にスクリプトを削除
-      return () => {
-        if (document.head.contains(script)) {
-          document.head.removeChild(script);
+      // Zucks Ad Network広告の読み込み（エラーハンドリング強化）
+      try {
+        // 既存のスクリプトを確認
+        const existingScript = document.querySelector('script[src*="zucks.net"]');
+        if (existingScript) {
+          console.log('Zucks Ad Network script already loaded');
+          return;
         }
+
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = 'https://j.zucks.net.zimg.jp/j?f=693608';
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+        
+        // スクリプトが読み込まれた後の処理
+        script.onload = () => {
+          console.log('Zucks Ad Network script loaded successfully');
+          // 広告コンテナに広告が表示されるまで少し待つ
+          setTimeout(() => {
+            if (adContainerRef.current) {
+              // 広告が正常に表示されているかチェック
+              const adElements = adContainerRef.current.querySelectorAll('iframe, img, div[id*="zucks"]');
+              if (adElements.length > 0) {
+                console.log('Zucks Ad content detected');
+              }
+            }
+          }, 1000);
+        };
+        
+        script.onerror = (error) => {
+          console.warn('Zucks Ad Network script failed to load:', error);
+          // 広告読み込み失敗時はデモ表示を継続
+        };
+        
+        document.head.appendChild(script);
+      } catch (error) {
+        console.warn('Error loading Zucks Ad Network:', error);
+        // エラー時はデモ表示を継続
+      }
+      
+      // クリーンアップ: モーダルが閉じられた時の処理
+      return () => {
+        const zucksScripts = document.querySelectorAll('script[src*="zucks.net"]');
+        zucksScripts.forEach(scriptElement => {
+          if (document.head.contains(scriptElement)) {
+            document.head.removeChild(scriptElement);
+          }
+        });
       };
     }
   }, [isOpen]);
