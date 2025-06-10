@@ -780,6 +780,8 @@ ${allUrls.map(url => `  <url>
       const userTrackingPath = path.join(process.cwd(), 'client/src/lib/userTracking.ts');
       
       const content = fs.readFileSync(userTrackingPath, 'utf8');
+      // テストモード = ユーザーIDがコメントアウトされている状態（利用制限除外）
+      // 本番モード = ユーザーIDがアクティブな状態（利用制限適用）
       const isTestMode = content.includes("// 'user_1747983273983_rsdgkwozg'");
       
       res.json({ 
