@@ -780,7 +780,7 @@ ${allUrls.map(url => `  <url>
       const userTrackingPath = path.join(process.cwd(), 'client/src/lib/userTracking.ts');
       
       const content = fs.readFileSync(userTrackingPath, 'utf8');
-      const isTestMode = !content.includes("'user_1747983273983_rsdgkwozg'");
+      const isTestMode = content.includes("// 'user_1747983273983_rsdgkwozg'");
       
       res.json({ 
         isTestMode,
@@ -799,19 +799,19 @@ ${allUrls.map(url => `  <url>
       
       let content = fs.readFileSync(userTrackingPath, 'utf8');
       
-      const isCurrentlyTestMode = !content.includes("'user_1747983273983_rsdgkwozg'");
+      const isCurrentlyTestMode = content.includes("// 'user_1747983273983_rsdgkwozg'");
       
       if (isCurrentlyTestMode) {
         // Switch to production mode (apply limits)
         content = content.replace(
-          /\/\/ 'user_1747983273983_rsdgkwozg', \/\/ Temporarily removed for ad testing/,
-          "'user_1747983273983_rsdgkwozg', // Admin test user"
+          "  // 'user_1747983273983_rsdgkwozg', // Temporarily removed for ad testing",
+          "  'user_1747983273983_rsdgkwozg', // Admin test user"
         );
       } else {
         // Switch to test mode (exclude from limits)
         content = content.replace(
-          /'user_1747983273983_rsdgkwozg', \/\/ Admin test user/,
-          "// 'user_1747983273983_rsdgkwozg', // Temporarily removed for ad testing"
+          "  'user_1747983273983_rsdgkwozg', // Admin test user",
+          "  // 'user_1747983273983_rsdgkwozg', // Temporarily removed for ad testing"
         );
       }
       
