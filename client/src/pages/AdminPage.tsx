@@ -175,6 +175,30 @@ export default function AdminPage() {
     setArticleToDelete(null);
   };
 
+  const cleanupMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/admin/cleanup/execute", {
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error("Failed to execute cleanup");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "データクリーンアップ完了",
+        description: `${data.totalDeleted}件のレコードを削除しました。`,
+      });
+      refetchCleanupStats();
+    },
+    onError: () => {
+      toast({
+        title: "エラー",
+        description: "データクリーンアップに失敗しました。",
+        variant: "destructive",
+      });
+    },
+  });
+
   // ページネーションコンポーネント
   const PaginationComponent = () => {
     if (totalPages <= 1) return null;
@@ -280,10 +304,14 @@ export default function AdminPage() {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="stats" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             統計情報
+          </TabsTrigger>
+          <TabsTrigger value="cleanup" className="flex items-center gap-2">
+            <Database className="h-4 w-4" />
+            DB管理
           </TabsTrigger>
           <TabsTrigger value="articles" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -356,6 +384,103 @@ export default function AdminPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="cleanup" className="mt-6">
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-text-primary">データベース管理</h3>
+            
+            {/* Cleanup Status */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-medium text-blue-900 mb-2">自動クリーンアップ状態</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-blue-700">スケジューラー:</span>
+                  <span className={`font-medium ${cleanupStatus?.isRunning ? 'text-green-600' : 'text-red-600'}`}>
+                    {cleanupStatus?.isRunning ? '稼働中' : '停止中'}
+                  </span>
+                </div>
+                {cleanupStatus?.nextCleanup && (
+                  <div className="flex justify-between">
+                    <span className="text-blue-700">次回実行:</span>
+                    <span className="text-blue-900 font-medium">
+                      {new Date(cleanupStatus.nextCleanup).toLocaleString('ja-JP')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Database Statistics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {cleanupStats?.totalUserUsageCount || 0}
+                </div>
+                <div className="text-sm text-green-700">総利用記録</div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {cleanupStats?.totalDistanceQueryCount || 0}
+                </div>
+                <div className="text-sm text-blue-700">総検索記録</div>
+              </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-yellow-600">
+                  {cleanupStats?.oldUserUsageCount || 0}
+                </div>
+                <div className="text-sm text-yellow-700">古い利用記録</div>
+              </div>
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-orange-600">
+                  {cleanupStats?.oldDistanceQueryCount || 0}
+                </div>
+                <div className="text-sm text-orange-700">古い検索記録</div>
+              </div>
+            </div>
+
+            {/* Cleanup Actions */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h4 className="font-medium text-gray-900 mb-4">手動クリーンアップ</h4>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-amber-800">
+                      <strong>注意:</strong> この操作は3ヶ月以上古いデータを完全に削除します。削除されたデータは復元できません。
+                    </p>
+                    <p className="text-sm text-amber-700 mt-1">
+                      削除対象: {(cleanupStats?.oldUserUsageCount || 0) + (cleanupStats?.oldDistanceQueryCount || 0)}件のレコード
+                    </p>
+                  </div>
+                </div>
+                
+                <Button
+                  onClick={() => cleanupMutation.mutate()}
+                  disabled={cleanupMutation.isPending || ((cleanupStats?.oldUserUsageCount || 0) + (cleanupStats?.oldDistanceQueryCount || 0)) === 0}
+                  variant="destructive"
+                  className="w-full"
+                >
+                  {cleanupMutation.isPending ? (
+                    "クリーンアップ実行中..."
+                  ) : (
+                    `古いデータを削除 (${(cleanupStats?.oldUserUsageCount || 0) + (cleanupStats?.oldDistanceQueryCount || 0)}件)`
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Cleanup Information */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h4 className="font-medium text-gray-900 mb-2">クリーンアップについて</h4>
+              <ul className="text-sm text-gray-700 space-y-1">
+                <li>• 自動クリーンアップは24時間毎に実行されます</li>
+                <li>• 3ヶ月以上経過したユーザー利用記録と検索記録を削除します</li>
+                <li>• 記事データは削除されません</li>
+                <li>• データベースの容量効率化とパフォーマンス向上が目的です</li>
+              </ul>
             </div>
           </div>
         </TabsContent>
