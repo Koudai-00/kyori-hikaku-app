@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Play } from "lucide-react";
 
@@ -43,10 +43,10 @@ export default function AdModal({ isOpen, onClose, onComplete }: AdModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-sm">
+        <DialogTitle className="text-lg font-semibold text-text-primary text-center">
+          月間利用制限に達しました
+        </DialogTitle>
         <div className="text-center p-2">
-          <h3 className="text-lg font-semibold text-text-primary mb-4">
-            月間利用制限に達しました
-          </h3>
           <p className="text-text-secondary text-sm mb-6">
             継続して利用するには、以下の広告を視聴してください。
           </p>
