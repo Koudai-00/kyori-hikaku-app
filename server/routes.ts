@@ -1,13 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserUsageSchema, insertDistanceQuerySchema, insertArticleSchema } from "@shared/schema";
+import { insertUserUsageSchema, insertDistanceQuerySchema, insertArticleSchema, insertContactSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import express from "express";
 import sharp from "sharp";
+import { sendContactEmails } from "./emailService";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -771,6 +772,55 @@ ${allUrls.map(url => `  <url>
     } catch (error) {
       console.error('Error generating sitemap:', error);
       res.status(500).send('Error generating sitemap');
+    }
+  });
+
+  // Contact form submission endpoint
+  app.post("/api/contact", async (req, res) => {
+    try {
+      // Validate input data
+      const contactData = insertContactSchema.extend({
+        subject: z.string().min(1, "件名は必須です"),
+        name: z.string().min(1, "お名前は必須です"),
+        email: z.string().email("正しいメールアドレスを入力してください"),
+        message: z.string().min(10, "お問い合わせ内容は10文字以上で入力してください"),
+        phone: z.string().optional()
+      }).parse(req.body);
+
+      // Save to database and get inquiry number
+      const contact = await storage.createContact(contactData);
+
+      // Prepare email data
+      const emailData = {
+        name: contact.name,
+        email: contact.email,
+        phone: contact.phone || '',
+        subject: contact.subject,
+        message: contact.message,
+        inquiryNumber: contact.inquiryNumber
+      };
+
+      // Send emails (admin notification and auto-reply)
+      const emailResults = await sendContactEmails(emailData);
+
+      res.json({
+        success: true,
+        inquiryNumber: contact.inquiryNumber,
+        emailResults
+      });
+    } catch (error) {
+      console.error('Contact form error:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: "入力内容に不備があります",
+          errors: error.errors
+        });
+      }
+      res.status(500).json({
+        success: false,
+        message: "お問い合わせの送信に失敗しました"
+      });
     }
   });
 

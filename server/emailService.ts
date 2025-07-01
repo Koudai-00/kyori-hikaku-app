@@ -3,7 +3,7 @@ import type { Contact } from '@shared/schema';
 
 // メール送信設定（Gmail SMTP使用）
 const createTransporter = () => {
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER || 'kk.work00124@gmail.com',
