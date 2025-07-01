@@ -91,7 +91,8 @@ export default function Contact() {
 
       const recaptchaToken = await executeRecaptcha('contact_form');
       
-      return await apiRequest('/api/contacts', 'POST', { ...data, recaptchaToken });
+      const response = await apiRequest('POST', '/api/contacts', { ...data, recaptchaToken });
+      return await response.json();
     },
     onSuccess: (data: any) => {
       setInquiryNumber(data.inquiryNumber);
