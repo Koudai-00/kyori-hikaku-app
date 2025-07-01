@@ -8,7 +8,7 @@ import path from "path";
 import fs from "fs";
 import express from "express";
 import sharp from "sharp";
-import { sendContactEmails } from "./emailService";
+import { processContactSubmission } from "./emailService";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -800,13 +800,14 @@ ${allUrls.map(url => `  <url>
         inquiryNumber: contact.inquiryNumber
       };
 
-      // Send emails (admin notification and auto-reply)
-      const emailResults = await sendContactEmails(emailData);
+      // Process contact submission (log and prepare email content)
+      const processResult = await processContactSubmission(emailData);
 
       res.json({
         success: true,
         inquiryNumber: contact.inquiryNumber,
-        emailResults
+        logged: processResult.logged,
+        autoReplyContent: processResult.autoReplyContent
       });
     } catch (error) {
       console.error('Contact form error:', error);

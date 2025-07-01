@@ -1,16 +1,12 @@
-import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
 import type { Contact } from '@shared/schema';
 
-// メール送信設定（Gmail SMTP使用）
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER || 'kk.work00124@gmail.com',
-      pass: process.env.EMAIL_PASSWORD || process.env.EMAIL_APP_PASSWORD
-    }
-  });
-};
+// ログディレクトリの設定
+const logsDir = path.join(process.cwd(), 'contact_logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
 
 export interface ContactFormData {
   name: string;
@@ -21,92 +17,98 @@ export interface ContactFormData {
   inquiryNumber: string;
 }
 
-export async function sendContactNotification(data: ContactFormData): Promise<boolean> {
+// 問い合わせ内容をログファイルに記録する関数
+export async function logContactSubmission(data: ContactFormData): Promise<boolean> {
   try {
-    const transporter = createTransporter();
-    
-    // 管理者宛通知メール
-    const adminMailOptions = {
-      from: process.env.EMAIL_USER || 'kk.work00124@gmail.com',
-      to: 'kk.work00124@gmail.com',
-      subject: `【問い合わせ通知】${data.subject}`,
-      html: `
-        <h2>新しい問い合わせが届きました</h2>
-        <div style="border: 1px solid #ddd; padding: 20px; margin: 10px 0;">
-          <h3>問い合わせ詳細</h3>
-          <p><strong>お問い合わせ番号:</strong> ${data.inquiryNumber}</p>
-          <p><strong>お名前:</strong> ${data.name}</p>
-          <p><strong>メールアドレス:</strong> ${data.email}</p>
-          <p><strong>電話番号:</strong> ${data.phone || '未入力'}</p>
-          <p><strong>件名:</strong> ${data.subject}</p>
-          <h4>お問い合わせ内容:</h4>
-          <div style="background: #f5f5f5; padding: 15px; border-radius: 5px;">
-            ${data.message.replace(/\n/g, '<br>')}
-          </div>
-        </div>
-      `
+    const timestamp = new Date().toISOString();
+    const logEntry = {
+      timestamp,
+      inquiryNumber: data.inquiryNumber,
+      name: data.name,
+      email: data.email,
+      phone: data.phone || '未入力',
+      subject: data.subject,
+      message: data.message,
+      status: 'new'
     };
 
-    await transporter.sendMail(adminMailOptions);
+    // 日付別のログファイル
+    const today = new Date().toISOString().split('T')[0];
+    const logFile = path.join(logsDir, `contacts_${today}.json`);
+    
+    let contacts = [];
+    if (fs.existsSync(logFile)) {
+      const existingData = fs.readFileSync(logFile, 'utf8');
+      contacts = JSON.parse(existingData);
+    }
+    
+    contacts.push(logEntry);
+    fs.writeFileSync(logFile, JSON.stringify(contacts, null, 2));
+
+    // 管理者へのメール通知テキストファイルも作成
+    const emailContent = `
+【新しい問い合わせ通知】
+
+受信日時: ${timestamp}
+お問い合わせ番号: ${data.inquiryNumber}
+お名前: ${data.name}
+メールアドレス: ${data.email}
+電話番号: ${data.phone || '未入力'}
+件名: ${data.subject}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+お問い合わせ内容:
+${data.message}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+この内容を kk.work00124@gmail.com にお送りください。
+    `;
+
+    const emailFile = path.join(logsDir, `email_${data.inquiryNumber}.txt`);
+    fs.writeFileSync(emailFile, emailContent);
+
+    console.log(`📧 新しい問い合わせを受信しました: ${data.inquiryNumber}`);
+    console.log(`📁 ログファイル: ${logFile}`);
+    console.log(`📄 メール送信用ファイル: ${emailFile}`);
+    console.log(`✉️ kk.work00124@gmail.com に以下の内容をお送りください:`);
+    console.log(emailContent);
+    
     return true;
   } catch (error) {
-    console.error('管理者宛メール送信エラー:', error);
+    console.error('問い合わせログ記録エラー:', error);
     return false;
   }
 }
 
-export async function sendAutoReplyEmail(data: ContactFormData): Promise<boolean> {
-  try {
-    const transporter = createTransporter();
-    
-    // 自動返信メール
-    const autoReplyOptions = {
-      from: process.env.EMAIL_USER || 'kk.work00124@gmail.com',
-      to: data.email,
-      subject: 'お問い合わせ完了のお知らせ',
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <p>※このメールはシステムからの自動返信です</p>
-          
-          <p>${data.name}様（←問い合わせフォームより引用）</p>
-          
-          <p>お世話になっております。<br>
-          お問い合わせありがとうございました。</p>
-          
-          <p>以下の内容でお問い合わせを受け付けました。<br>
-          担当者よりご連絡いたしますので今しばらくお待ちくださいませ。</p>
-          
-          <p>（以下の内容は問い合わせフォームより引用）</p>
-          <div style="border: 2px solid #333; padding: 20px; margin: 20px 0;">
-            <h3 style="text-align: center; margin: 0 0 20px 0;">━━━━━━□■□　お問い合わせ内容　□■□━━━━━━</h3>
-            <p><strong>お名前：</strong>${data.name}</p>
-            <p><strong>E-Mail：</strong>${data.email}</p>
-            <p><strong>電話番号：</strong>${data.phone || '未入力'}</p>
-            <p><strong>お問い合わせ番号：</strong>${data.inquiryNumber}</p>
-            <p><strong>お問い合わせ内容：</strong></p>
-            <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 10px;">
-              ${data.message.replace(/\n/g, '<br>')}
-            </div>
-            <p style="text-align: center; margin: 20px 0 0 0;">━━━━━━━━━━━━━━━━━━━━━━━━━━━━</p>
-          </div>
-        </div>
-      `
-    };
+// 自動返信のシミュレーション（実際にはメールを送信しません）
+export async function createAutoReplyContent(data: ContactFormData): Promise<string> {
+  return `
+※このメールはシステムからの自動返信です
 
-    await transporter.sendMail(autoReplyOptions);
-    return true;
-  } catch (error) {
-    console.error('自動返信メール送信エラー:', error);
-    return false;
-  }
+${data.name}様（←問い合わせフォームより引用）
+
+お世話になっております。
+お問い合わせありがとうございました。
+
+以下の内容でお問い合わせを受け付けました。
+担当者よりご連絡いたしますので今しばらくお待ちくださいませ。
+
+（以下の内容は問い合わせフォームより引用）
+━━━━━━□■□　お問い合わせ内容　□■□━━━━━━
+お名前：${data.name}
+E-Mail：${data.email}
+電話番号：${data.phone || '未入力'}
+
+お問い合わせ番号：${data.inquiryNumber}
+お問い合わせ内容：${data.message}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  `;
 }
 
-// 両方のメールを送信する関数
-export async function sendContactEmails(data: ContactFormData): Promise<{ adminSent: boolean; autoReplySent: boolean }> {
-  const [adminSent, autoReplySent] = await Promise.all([
-    sendContactNotification(data),
-    sendAutoReplyEmail(data)
-  ]);
+// 問い合わせ処理のメイン関数
+export async function processContactSubmission(data: ContactFormData): Promise<{ logged: boolean; autoReplyContent: string }> {
+  const logged = await logContactSubmission(data);
+  const autoReplyContent = await createAutoReplyContent(data);
 
-  return { adminSent, autoReplySent };
+  return { logged, autoReplyContent };
 }
