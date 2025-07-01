@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AdminLogin from "@/components/AdminLogin";
 import ArticleEditor from "@/components/ArticleEditor";
-import { LogOut, FileText, BarChart3, Edit, Trash2, Search, ChevronLeft, ChevronRight, Database, AlertTriangle } from "lucide-react";
+import { LogOut, FileText, BarChart3, Edit, Trash2, Search, ChevronLeft, ChevronRight, Database, AlertTriangle, MessageSquare, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -24,6 +24,13 @@ export default function AdminPage() {
   const [sortOrder, setSortOrder] = useState("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+  
+  // 問い合わせ一覧の状態
+  const [contactSearchQuery, setContactSearchQuery] = useState("");
+  const [contactCurrentPage, setContactCurrentPage] = useState(1);
+  const [selectedContact, setSelectedContact] = useState<any>(null);
+  const [contactDetailOpen, setContactDetailOpen] = useState(false);
+  const contactItemsPerPage = 10;
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -338,10 +345,14 @@ export default function AdminPage() {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="stats" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             統計情報
+          </TabsTrigger>
+          <TabsTrigger value="contacts" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            問い合わせ
           </TabsTrigger>
           <TabsTrigger value="cleanup" className="flex items-center gap-2">
             <Database className="h-4 w-4" />

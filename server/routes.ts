@@ -9,6 +9,8 @@ import fs from "fs";
 import express from "express";
 import sharp from "sharp";
 import { processContactSubmission } from "./emailService";
+import { sendLineNotification } from "./lineService";
+import { verifyRecaptcha } from "./recaptchaService";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -802,6 +804,23 @@ ${allUrls.map(url => `  <url>
 
       // Process contact submission (log and prepare email content)
       const processResult = await processContactSubmission(emailData);
+
+      // Send LINE notification
+      const lineNotificationData = {
+        inquiryNumber: contact.inquiryNumber,
+        name: contact.name,
+        email: contact.email,
+        subject: contact.subject,
+        createdAt: contact.createdAt || new Date()
+      };
+      
+      const lineNotificationSent = await sendLineNotification(lineNotificationData);
+      
+      if (lineNotificationSent) {
+        console.log("📱 LINE通知が送信されました");
+      } else {
+        console.log("⚠️ LINE通知の送信に失敗しました");
+      }
 
       res.json({
         success: true,
