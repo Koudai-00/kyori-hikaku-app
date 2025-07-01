@@ -59,7 +59,7 @@ export default function ContactList({ isVisible }: ContactListProps) {
   // Get contacts list
   const { data: contactsData, isLoading } = useQuery({
     queryKey: ['/api/admin/contacts', currentPage, searchTerm],
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: limit.toString(),
@@ -67,7 +67,8 @@ export default function ContactList({ isVisible }: ContactListProps) {
       if (searchTerm) {
         params.append('search', searchTerm);
       }
-      return apiRequest(`/api/admin/contacts?${params}`, 'GET');
+      const response = await apiRequest(`/api/admin/contacts?${params}`, 'GET');
+      return response as ContactsResponse;
     },
     enabled: isVisible,
   });
@@ -303,11 +304,11 @@ export default function ContactList({ isVisible }: ContactListProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-400">
                 <div>
                   <label className="font-semibold">受信日時:</label>
-                  <p>{new Date(selectedContact.createdAt).toLocaleString('ja-JP')}</p>
+                  <p>{selectedContact.createdAt ? new Date(selectedContact.createdAt).toLocaleString('ja-JP') : '未設定'}</p>
                 </div>
                 <div>
                   <label className="font-semibold">更新日時:</label>
-                  <p>{new Date(selectedContact.updatedAt).toLocaleString('ja-JP')}</p>
+                  <p>{selectedContact.updatedAt ? new Date(selectedContact.updatedAt).toLocaleString('ja-JP') : '未設定'}</p>
                 </div>
               </div>
             </div>
