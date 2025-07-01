@@ -44,6 +44,23 @@ export const articles = pgTable("articles", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const contacts = pgTable("contacts", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  inquiryNumber: text("inquiry_number").notNull().unique(),
+  status: text("status").notNull().default("pending"), // pending, reviewed, resolved
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  emailIdx: index("contacts_email_idx").on(table.email),
+  statusIdx: index("contacts_status_idx").on(table.status),
+  createdAtIdx: index("contacts_created_at_idx").on(table.createdAt),
+}));
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -66,6 +83,14 @@ export const insertArticleSchema = createInsertSchema(articles).omit({
   updatedAt: true,
 });
 
+export const insertContactSchema = createInsertSchema(contacts).omit({
+  id: true,
+  inquiryNumber: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertUserUsage = z.infer<typeof insertUserUsageSchema>;
@@ -74,3 +99,5 @@ export type InsertDistanceQuery = z.infer<typeof insertDistanceQuerySchema>;
 export type DistanceQuery = typeof distanceQuery.$inferSelect;
 export type InsertArticle = z.infer<typeof insertArticleSchema>;
 export type Article = typeof articles.$inferSelect;
+export type InsertContact = z.infer<typeof insertContactSchema>;
+export type Contact = typeof contacts.$inferSelect;

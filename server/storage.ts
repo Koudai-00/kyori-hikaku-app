@@ -1,6 +1,6 @@
-import { users, userUsage, distanceQuery, articles, type User, type InsertUser, type UserUsage, type InsertUserUsage, type DistanceQuery, type InsertDistanceQuery, type Article, type InsertArticle } from "@shared/schema";
+import { users, userUsage, distanceQuery, articles, contacts, type User, type InsertUser, type UserUsage, type InsertUserUsage, type DistanceQuery, type InsertDistanceQuery, type Article, type InsertArticle, type Contact, type InsertContact } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { eq, desc, sql, and, count, lt } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -35,6 +35,14 @@ export interface IStorage {
     totalUserUsageCount: number;
     totalDistanceQueryCount: number;
   }>;
+
+  // Contact operations
+  createContact(contact: InsertContact): Promise<Contact>;
+  getAllContacts(page?: number, limit?: number): Promise<{ contacts: Contact[], total: number }>;
+  getContactById(id: number): Promise<Contact | undefined>;
+  updateContactStatus(id: number, status: string): Promise<Contact | undefined>;
+  deleteContact(id: number): Promise<boolean>;
+  generateInquiryNumber(): string;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -250,6 +258,70 @@ export class DatabaseStorage implements IStorage {
       .from(articles)
       .orderBy(desc(articles.views))
       .limit(limit);
+  }
+
+  // Contact operations
+  generateInquiryNumber(): string {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `INQ${timestamp}${random}`;
+  }
+
+  async createContact(insertContact: InsertContact): Promise<Contact> {
+    const inquiryNumber = this.generateInquiryNumber();
+    const [contact] = await db
+      .insert(contacts)
+      .values({
+        ...insertContact,
+        inquiryNumber,
+      })
+      .returning();
+    return contact;
+  }
+
+  async getAllContacts(page: number = 1, limit: number = 10): Promise<{ contacts: Contact[], total: number }> {
+    const offset = (page - 1) * limit;
+    
+    const [contactsResult, totalResult] = await Promise.all([
+      db
+        .select()
+        .from(contacts)
+        .orderBy(desc(contacts.createdAt))
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(contacts)
+    ]);
+
+    return {
+      contacts: contactsResult,
+      total: totalResult[0]?.count || 0
+    };
+  }
+
+  async getContactById(id: number): Promise<Contact | undefined> {
+    const [contact] = await db.select().from(contacts).where(eq(contacts.id, id));
+    return contact || undefined;
+  }
+
+  async updateContactStatus(id: number, status: string): Promise<Contact | undefined> {
+    const [contact] = await db
+      .update(contacts)
+      .set({ 
+        status,
+        updatedAt: new Date()
+      })
+      .where(eq(contacts.id, id))
+      .returning();
+    return contact || undefined;
+  }
+
+  async deleteContact(id: number): Promise<boolean> {
+    const result = await db
+      .delete(contacts)
+      .where(eq(contacts.id, id));
+    return result.rowCount > 0;
   }
 }
 
