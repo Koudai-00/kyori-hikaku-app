@@ -22,6 +22,7 @@ interface ContactFormData {
 interface ContactFormErrors {
   name?: string;
   email?: string;
+  phone?: string;
   subject?: string;
   message?: string;
   recaptcha?: string;
@@ -48,6 +49,12 @@ export default function Contact() {
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [inquiryNumber, setInquiryNumber] = useState<string>('');
   const { toast } = useToast();
+
+  // Get reCAPTCHA site key
+  const { data: recaptchaConfig } = useQuery({
+    queryKey: ['/api/recaptcha-config'],
+    retry: false,
+  }) as { data: { siteKey?: string } | undefined };
 
   const validateForm = (): boolean => {
     const newErrors: ContactFormErrors = {};
@@ -82,7 +89,7 @@ export default function Contact() {
     mutationFn: async (data: ContactFormData & { recaptchaToken: string }) => {
       return await apiRequest('/api/contacts', 'POST', data);
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setInquiryNumber(data.inquiryNumber);
       setCurrentStep(steps.COMPLETE);
       toast({
@@ -190,19 +197,21 @@ export default function Contact() {
           {errors.message && <p className="text-sm text-red-500">{errors.message}</p>}
         </div>
 
-        <div className="space-y-2">
-          <ReCAPTCHA
-            sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-            onChange={(token) => {
-              setRecaptchaToken(token);
-              if (errors.recaptcha) {
-                setErrors(prev => ({ ...prev, recaptcha: undefined }));
-              }
-            }}
-            onExpired={() => setRecaptchaToken(null)}
-          />
-          {errors.recaptcha && <p className="text-sm text-red-500">{errors.recaptcha}</p>}
-        </div>
+        {recaptchaConfig?.siteKey && (
+          <div className="space-y-2">
+            <ReCAPTCHA
+              sitekey={recaptchaConfig.siteKey}
+              onChange={(token) => {
+                setRecaptchaToken(token);
+                if (errors.recaptcha) {
+                  setErrors(prev => ({ ...prev, recaptcha: undefined }));
+                }
+              }}
+              onExpired={() => setRecaptchaToken(null)}
+            />
+            {errors.recaptcha && <p className="text-sm text-red-500">{errors.recaptcha}</p>}
+          </div>
+        )}
       </div>
 
       <div className="flex gap-4">
