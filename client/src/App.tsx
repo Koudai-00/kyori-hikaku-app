@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 import Navigation from "@/components/Navigation";
 import { useEffect } from "react";
 import HomePage from "@/pages/HomePage";
@@ -41,17 +42,17 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <div className="min-h-screen bg-neutral">
-          <Navigation />
-          <main className="max-w-md md:max-w-4xl mx-auto p-4 pb-32">
-            <Router />
-          </main>
-          
-
-        </div>
-        <Toaster />
-      </TooltipProvider>
+      <GoogleReCaptchaProvider reCaptchaKey="6LcqKnQrAAAAAHhxwbKl8VELmpMULVyVOhqt8mFw">
+        <TooltipProvider>
+          <div className="min-h-screen bg-neutral">
+            <Navigation />
+            <main className="max-w-md md:max-w-4xl mx-auto p-4 pb-32">
+              <Router />
+            </main>
+          </div>
+          <Toaster />
+        </TooltipProvider>
+      </GoogleReCaptchaProvider>
     </QueryClientProvider>
   );
 }

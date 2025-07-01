@@ -125,12 +125,7 @@ export default function Contact() {
   };
 
   const handleSubmit = () => {
-    if (recaptchaToken) {
-      submitMutation.mutate({
-        ...formData,
-        recaptchaToken
-      });
-    }
+    submitMutation.mutate(formData);
   };
 
   const handleBack = () => {
@@ -201,21 +196,7 @@ export default function Contact() {
           {errors.message && <p className="text-sm text-red-500">{errors.message}</p>}
         </div>
 
-        {recaptchaConfig?.siteKey && (
-          <div className="space-y-2">
-            <ReCAPTCHA
-              sitekey={recaptchaConfig.siteKey}
-              onChange={(token) => {
-                setRecaptchaToken(token);
-                if (errors.recaptcha) {
-                  setErrors(prev => ({ ...prev, recaptcha: undefined }));
-                }
-              }}
-              onExpired={() => setRecaptchaToken(null)}
-            />
-            {errors.recaptcha && <p className="text-sm text-red-500">{errors.recaptcha}</p>}
-          </div>
-        )}
+        {/* reCAPTCHA v3は背景で自動実行されるため、ユーザーが見えるコンポーネントは不要 */}
       </div>
 
       <div className="flex gap-4">
