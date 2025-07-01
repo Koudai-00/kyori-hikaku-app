@@ -259,6 +259,78 @@ ${allUrls.map(url => `  <url>
     }
   });
 
+  // Get contacts list for admin (with pagination and search)
+  app.get("/api/admin/contacts", async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const search = req.query.search as string;
+      
+      const contacts = await storage.getAllContacts(page, limit, search);
+      res.json(contacts);
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+      res.status(500).json({ message: "問い合わせ一覧の取得に失敗しました" });
+    }
+  });
+
+  // Get single contact detail for admin
+  app.get("/api/admin/contacts/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const contact = await storage.getContactById(id);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "問い合わせが見つかりません" });
+      }
+      
+      res.json(contact);
+    } catch (error) {
+      console.error('Error fetching contact:', error);
+      res.status(500).json({ message: "問い合わせの取得に失敗しました" });
+    }
+  });
+
+  // Update contact status
+  app.put("/api/admin/contacts/:id/status", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!['pending', 'reviewed', 'resolved'].includes(status)) {
+        return res.status(400).json({ message: "無効なステータスです" });
+      }
+      
+      const contact = await storage.updateContactStatus(id, status);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "問い合わせが見つかりません" });
+      }
+      
+      res.json(contact);
+    } catch (error) {
+      console.error('Error updating contact status:', error);
+      res.status(500).json({ message: "ステータスの更新に失敗しました" });
+    }
+  });
+
+  // Delete contact
+  app.delete("/api/admin/contacts/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteContact(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "問い合わせが見つかりません" });
+      }
+      
+      res.json({ message: "問い合わせを削除しました" });
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+      res.status(500).json({ message: "問い合わせの削除に失敗しました" });
+    }
+  });
+
   // New endpoint: /get-distance for Google Distance Matrix API
   app.post("/get-distance", async (req, res) => {
     try {
