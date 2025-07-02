@@ -8,5 +8,15 @@
     "subject": "テスト問い合わせ",
     "message": "問い合わせのテストです。",
     "status": "new"
+  },
+  {
+    "timestamp": "2025-07-01T22:38:01.919Z",
+    "inquiryNumber": "INQ1751409481167846",
+    "name": "テスト太郎",
+    "email": "test@gmail.com",
+    "phone": "000-0000-0000",
+    "subject": "テスト問い合わせ",
+    "message": "テストです。テストです。",
+    "status": "new"
   }
 ]
