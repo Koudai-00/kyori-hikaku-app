@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
 import ResultsTable from "./ResultsTable";
 import TravelModeChangeConfirmDialog from "./TravelModeChangeConfirmDialog";
-import AdModal from "./AdModal";
+// import AdModal from "./AdModal"; // 一時的に非表示
 import RouteDetailModal, { type RouteSettings } from "./RouteDetailModal";
 import PlaceAutocomplete from "./PlaceAutocomplete";
 import {
@@ -606,11 +606,13 @@ export default function DistanceForm() {
 
       {showResults && results.length > 0 && <ResultsTable results={results} />}
 
+      {/* 広告モーダルを一時的に非表示
       <AdModal
         isOpen={showAdModal}
         onClose={() => setShowAdModal(false)}
         onComplete={handleAdComplete}
       />
+      */}
 
       <RouteDetailModal
         isOpen={showRouteDetailModal}

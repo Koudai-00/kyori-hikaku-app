@@ -116,6 +116,10 @@ This is a full-stack web application that allows users to compare distances and 
 ```
 Changelog:
 - July 01, 2025. Initial setup
+- July 02, 2025. 広告を一時的に非表示に変更（コメントアウト）
+  - フッター広告（Zucks Ad Network）を非表示
+  - モーダル広告（AdModal）を非表示
+  - 将来の再表示に備えてコメントアウトで保持
 ```
 
 ## User Preferences
