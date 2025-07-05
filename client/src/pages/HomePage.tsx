@@ -1,8 +1,10 @@
 import DistanceForm from "@/components/DistanceForm";
+import ShortestRouteForm from "@/components/ShortestRouteForm";
 import { getUserId, getCurrentMonth, getUserUsage, isTestUser } from "@/lib/userTracking";
 import { useQuery } from "@tanstack/react-query";
 import { Info } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function HomePage() {
   const userId = getUserId();
@@ -57,30 +59,43 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      <DistanceForm />
-      
-      {/* Usage Limit Info */}
-      <div className={`border rounded-xl p-4 ${isUserTestAccount ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
-        <div className="flex items-start gap-3">
-          <Info className={`h-5 w-5 mt-0.5 ${isUserTestAccount ? 'text-green-600' : 'text-yellow-600'}`} />
-          <div>
-            <h4 className={`font-medium mb-1 ${isUserTestAccount ? 'text-green-800' : 'text-yellow-800'}`}>利用制限について</h4>
-            <p className={`text-sm ${isUserTestAccount ? 'text-green-700' : 'text-yellow-700'}`}>
-              {isUserTestAccount ? (
-                <>
-                  <span className="font-semibold">テストアカウント: 利用制限が適用除外されています</span><br />
-                  無制限でご利用いただけます。
-                </>
-              ) : (
-                <>
-                  今月の残り利用回数: <span className="font-semibold">{remainingUses}回</span><br />
-                  制限に達した場合、広告視聴で継続利用できます。
-                </>
-              )}
-            </p>
+      <Tabs defaultValue="distance" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="distance">距離比較</TabsTrigger>
+          <TabsTrigger value="route">最短ルート作成</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="distance" className="space-y-6">
+          <DistanceForm />
+          
+          {/* Usage Limit Info */}
+          <div className={`border rounded-xl p-4 ${isUserTestAccount ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+            <div className="flex items-start gap-3">
+              <Info className={`h-5 w-5 mt-0.5 ${isUserTestAccount ? 'text-green-600' : 'text-yellow-600'}`} />
+              <div>
+                <h4 className={`font-medium mb-1 ${isUserTestAccount ? 'text-green-800' : 'text-yellow-800'}`}>利用制限について</h4>
+                <p className={`text-sm ${isUserTestAccount ? 'text-green-700' : 'text-yellow-700'}`}>
+                  {isUserTestAccount ? (
+                    <>
+                      <span className="font-semibold">テストアカウント: 利用制限が適用除外されています</span><br />
+                      無制限でご利用いただけます。
+                    </>
+                  ) : (
+                    <>
+                      今月の残り利用回数: <span className="font-semibold">{remainingUses}回</span><br />
+                      制限に達した場合、広告視聴で継続利用できます。
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </TabsContent>
+        
+        <TabsContent value="route" className="space-y-6">
+          <ShortestRouteForm />
+        </TabsContent>
+      </Tabs>
 
       {/* 使い方説明 */}
       <div className="bg-white rounded-xl shadow-sm p-6 mt-8">

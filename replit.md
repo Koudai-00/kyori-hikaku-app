@@ -121,6 +121,12 @@ Changelog:
   - モーダル広告（AdModal）を非表示
   - 利用制限回数による制御を一時的に無効化
   - 将来の再表示・再有効化に備えてコメントアウトで保持
+- July 02, 2025. 最短ルート作成機能を追加
+  - タブ切り替えUI（距離比較・最短ルート作成）
+  - 複数目的地のテキストエリア入力
+  - Google Geocoding APIによる住所変換
+  - Google Directions APIによる最適化ルート計算
+  - 結果表示とGoogleマップ連携機能
 ```
 
 ## User Preferences

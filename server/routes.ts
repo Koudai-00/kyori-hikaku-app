@@ -1017,6 +1017,126 @@ ${allUrls.map(url => `  <url>
     }
   });
 
+  // Create shortest route
+  app.post("/api/create-shortest-route", async (req, res) => {
+    try {
+      const { origin, destinations } = req.body;
+      
+      if (!origin || !destinations || !Array.isArray(destinations)) {
+        return res.status(400).json({
+          success: false,
+          message: "出発地と目的地が必要です"
+        });
+      }
+
+      if (destinations.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "少なくとも1つの目的地を指定してください"
+        });
+      }
+
+      if (destinations.length > 10) {
+        return res.status(400).json({
+          success: false,
+          message: "目的地は最大10個までです"
+        });
+      }
+
+      // Google Maps Geocoding API key
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY_SERVER || process.env.GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({
+          success: false,
+          message: "Google Maps API key is not configured"
+        });
+      }
+
+      // Geocode all destinations
+      const geocodingPromises = destinations.map(async (destination: string) => {
+        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(destination)}&language=ja&key=${apiKey}`;
+        
+        const response = await fetch(geocodeUrl);
+        const data = await response.json();
+        
+        if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+          throw new Error(`住所が見つかりません: ${destination}`);
+        }
+
+        const result = data.results[0];
+        return {
+          name: destination,
+          address: result.formatted_address,
+          lat: result.geometry.location.lat,
+          lng: result.geometry.location.lng
+        };
+      });
+
+      const waypoints = await Promise.all(geocodingPromises);
+      
+      // Create optimized route using Google Directions API
+      const waypointsParam = waypoints
+        .map(wp => `${wp.lat},${wp.lng}`)
+        .join('|');
+
+      const directionsUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(waypoints[waypoints.length - 1].address)}&waypoints=optimize:true|${waypointsParam}&language=ja&key=${apiKey}`;
+      
+      const directionsResponse = await fetch(directionsUrl);
+      const directionsData = await directionsResponse.json();
+      
+      if (directionsData.status !== 'OK' || !directionsData.routes || directionsData.routes.length === 0) {
+        return res.status(500).json({
+          success: false,
+          message: "ルートの計算に失敗しました"
+        });
+      }
+
+      const route = directionsData.routes[0];
+      const optimizedOrder = directionsData.routes[0].waypoint_order || [];
+      
+      // Calculate total distance and duration
+      let totalDistance = 0;
+      let totalDuration = 0;
+      
+      route.legs.forEach((leg: any) => {
+        totalDistance += leg.distance.value;
+        totalDuration += leg.duration.value;
+      });
+
+      const formatDistance = (meters: number) => {
+        if (meters < 1000) {
+          return `${meters}m`;
+        }
+        return `${(meters / 1000).toFixed(1)}km`;
+      };
+
+      const formatDuration = (seconds: number) => {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        
+        if (hours > 0) {
+          return `${hours}時間${minutes}分`;
+        }
+        return `${minutes}分`;
+      };
+
+      res.json({
+        success: true,
+        optimizedOrder,
+        totalDistance: formatDistance(totalDistance),
+        totalDuration: formatDuration(totalDuration),
+        waypoints
+      });
+
+    } catch (error) {
+      console.error('Create route error:', error);
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : "ルートの作成に失敗しました"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
