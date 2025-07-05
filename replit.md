@@ -127,6 +127,11 @@ Changelog:
   - Google Geocoding APIによる住所変換
   - Google Directions APIによる最適化ルート計算
   - 結果表示とGoogleマップ連携機能
+- July 05, 2025. 最短ルート作成機能を改善
+  - 出発地入力に自動補完機能を追加
+  - Googleマップ連携の重複問題を修正
+  - ルート再作成機能を改善（最適化順序での再計算）
+  - 個別目的地のポップアップマップ表示機能を追加
 ```
 
 ## User Preferences

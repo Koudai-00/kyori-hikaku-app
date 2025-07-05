@@ -5,6 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   MapPin,
   Calculator,
   Route,
@@ -18,6 +25,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
 import PlaceAutocomplete from "./PlaceAutocomplete";
+import GoogleMapView from "./GoogleMapView";
 
 interface GeocodingResult {
   name: string;
@@ -41,6 +49,8 @@ export default function ShortestRouteForm() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingName, setEditingName] = useState("");
   const [editingAddress, setEditingAddress] = useState("");
+  const [showMapDialog, setShowMapDialog] = useState(false);
+  const [selectedWaypoint, setSelectedWaypoint] = useState<GeocodingResult | null>(null);
   const [errors, setErrors] = useState<{
     origin?: string;
     destinations?: string;
@@ -211,6 +221,11 @@ export default function ShortestRouteForm() {
       title: "ルートを再作成しています",
       description: "最適化されたルート順序で再計算中です",
     });
+  };
+
+  const handleMapView = (waypoint: GeocodingResult) => {
+    setSelectedWaypoint(waypoint);
+    setShowMapDialog(true);
   };
 
   return (
@@ -399,10 +414,13 @@ export default function ShortestRouteForm() {
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                waypoint.address,
-                              )}`;
-                              window.open(mapUrl, "_blank");
+                              // 編集中の場合は編集内容を使用
+                              const displayWaypoint = isEditing ? {
+                                ...waypoint,
+                                name: editingName,
+                                address: editingAddress
+                              } : waypoint;
+                              handleMapView(displayWaypoint);
                             }}
                             className="h-8 w-8 p-0"
                           >
@@ -418,6 +436,27 @@ export default function ShortestRouteForm() {
           </div>
         </div>
       )}
+
+      {/* Map Dialog */}
+      <Dialog open={showMapDialog} onOpenChange={setShowMapDialog}>
+        <DialogContent className="max-w-4xl w-full max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedWaypoint ? `${selectedWaypoint.name} - マップ表示` : "マップ表示"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="h-[60vh] w-full">
+            {selectedWaypoint && (
+              <GoogleMapView
+                origin={selectedWaypoint.address}
+                destination={selectedWaypoint.address}
+                travelMode="driving"
+                selectedRoute={0}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
