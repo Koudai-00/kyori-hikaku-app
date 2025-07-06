@@ -51,6 +51,7 @@ export default function ShortestRouteForm() {
   const [editingAddress, setEditingAddress] = useState("");
   const [showMapDialog, setShowMapDialog] = useState(false);
   const [selectedWaypoint, setSelectedWaypoint] = useState<GeocodingResult | null>(null);
+  const [showRouteMapDialog, setShowRouteMapDialog] = useState(false);
   const [errors, setErrors] = useState<{
     origin?: string;
     destinations?: string;
@@ -228,6 +229,10 @@ export default function ShortestRouteForm() {
     setShowMapDialog(true);
   };
 
+  const handleRouteMapView = () => {
+    setShowRouteMapDialog(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm p-6">
@@ -315,13 +320,21 @@ export default function ShortestRouteForm() {
               </div>
             </div>
 
-            <div className="flex gap-2 mb-4">
+            <div className="flex flex-wrap gap-2 mb-4">
               <Button
                 onClick={openGoogleMaps}
                 className="flex items-center gap-2"
               >
                 <ExternalLink className="h-4 w-4" />
                 Googleマップで表示
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleRouteMapView}
+                className="flex items-center gap-2"
+              >
+                <Map className="h-4 w-4" />
+                ルートをマップで確認
               </Button>
               <Button
                 variant="outline"
@@ -437,7 +450,7 @@ export default function ShortestRouteForm() {
         </div>
       )}
 
-      {/* Map Dialog */}
+      {/* Individual Waypoint Map Dialog */}
       <Dialog open={showMapDialog} onOpenChange={setShowMapDialog}>
         <DialogContent className="max-w-4xl w-full max-h-[80vh] overflow-hidden">
           <DialogHeader>
@@ -452,6 +465,26 @@ export default function ShortestRouteForm() {
                 destination={selectedWaypoint.address}
                 travelMode="driving"
                 selectedRoute={0}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Route Map Dialog */}
+      <Dialog open={showRouteMapDialog} onOpenChange={setShowRouteMapDialog}>
+        <DialogContent className="max-w-6xl w-full max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>最短ルート - マップ表示</DialogTitle>
+          </DialogHeader>
+          <div className="h-[70vh] w-full">
+            {routeResult && (
+              <GoogleMapView
+                origin={origin}
+                destination={routeResult.waypoints[routeResult.optimizedOrder[routeResult.optimizedOrder.length - 1]].address}
+                travelMode="driving"
+                selectedRoute={0}
+                polyline=""
               />
             )}
           </div>
