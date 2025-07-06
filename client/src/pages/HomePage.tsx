@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function HomePage() {
   const userId = getUserId();
   const currentMonth = getCurrentMonth();
+  const [activeTab, setActiveTab] = useState("distance");
 
   const { data: usageData } = useQuery({
     queryKey: ["/api/usage", userId, currentMonth],
@@ -59,7 +60,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="distance" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="distance">距離比較</TabsTrigger>
           <TabsTrigger value="route">最短ルート作成</TabsTrigger>
@@ -101,32 +102,66 @@ export default function HomePage() {
       <div className="bg-white rounded-xl shadow-sm p-6 mt-8">
         <h2 className="text-xl font-bold text-gray-900 mb-6">使い方</h2>
         
-        <div className="space-y-6">
-          <div className="border-l-4 border-blue-500 pl-4">
-            <h3 className="font-semibold text-gray-900 mb-2">1. 出発地を入力</h3>
-            <p className="text-gray-600 text-sm">まず、出発地となる場所を入力してください。住所、施設名、駅名などが利用できます。</p>
-          </div>
+        {activeTab === "distance" ? (
+          <div className="space-y-6">
+            <div className="border-l-4 border-blue-500 pl-4">
+              <h3 className="font-semibold text-gray-900 mb-2">1. 出発地を入力</h3>
+              <p className="text-gray-600 text-sm">まず、出発地となる場所を入力してください。住所、施設名、駅名などが利用できます。</p>
+            </div>
 
-          <div className="border-l-4 border-blue-500 pl-4">
-            <h3 className="font-semibold text-gray-900 mb-2">2. 目的地を追加</h3>
-            <p className="text-gray-600 text-sm">比較したい目的地を最大5箇所まで追加できます。「目的地を追加」ボタンで入力欄を増やせます。</p>
-          </div>
+            <div className="border-l-4 border-blue-500 pl-4">
+              <h3 className="font-semibold text-gray-900 mb-2">2. 目的地を追加</h3>
+              <p className="text-gray-600 text-sm">比較したい目的地を最大5箇所まで追加できます。「目的地を追加」ボタンで入力欄を増やせます。</p>
+            </div>
 
-          <div className="border-l-4 border-blue-500 pl-4">
-            <h3 className="font-semibold text-gray-900 mb-2">3. 移動手段を選択</h3>
-            <p className="text-gray-600 text-sm">車、徒歩、公共交通機関、自転車から移動手段を選択してください。</p>
-          </div>
+            <div className="border-l-4 border-blue-500 pl-4">
+              <h3 className="font-semibold text-gray-900 mb-2">3. 移動手段を選択</h3>
+              <p className="text-gray-600 text-sm">車、徒歩、公共交通機関、自転車から移動手段を選択してください。</p>
+            </div>
 
-          <div className="border-l-4 border-blue-500 pl-4">
-            <h3 className="font-semibold text-gray-900 mb-2">4. 結果を比較</h3>
-            <p className="text-gray-600 text-sm">「距離と時間を比較」ボタンを押すと、各目的地への距離と所要時間が表示されます。</p>
-          </div>
+            <div className="border-l-4 border-blue-500 pl-4">
+              <h3 className="font-semibold text-gray-900 mb-2">4. 結果を比較</h3>
+              <p className="text-gray-600 text-sm">「距離と時間を比較」ボタンを押すと、各目的地への距離と所要時間が表示されます。</p>
+            </div>
 
-          <div className="border-l-4 border-blue-500 pl-4">
-            <h3 className="font-semibold text-gray-900 mb-2">5. 目的地を決定</h3>
-            <p className="text-gray-600 text-sm">「この場所に決定」ボタンを押すと、その場所をナビゲーション先としたGoogleマップが開きます。</p>
+            <div className="border-l-4 border-blue-500 pl-4">
+              <h3 className="font-semibold text-gray-900 mb-2">5. 目的地を決定</h3>
+              <p className="text-gray-600 text-sm">「この場所に決定」ボタンを押すと、その場所をナビゲーション先としたGoogleマップが開きます。</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="border-l-4 border-green-500 pl-4">
+              <h3 className="font-semibold text-gray-900 mb-2">1. 出発地を入力</h3>
+              <p className="text-gray-600 text-sm">出発地の住所や施設名を入力してください。自動補完機能で候補が表示されるので、適切な場所を選択してください。</p>
+            </div>
+
+            <div className="border-l-4 border-green-500 pl-4">
+              <h3 className="font-semibold text-gray-900 mb-2">2. 目的地を入力</h3>
+              <p className="text-gray-600 text-sm">目的地欄に複数の場所を入力してください。読点（、）、改行、カンマ（,）で区切って入力できます。最大10個の目的地まで設定可能です。</p>
+            </div>
+
+            <div className="border-l-4 border-green-500 pl-4">
+              <h3 className="font-semibold text-gray-900 mb-2">3. ルートを作成</h3>
+              <p className="text-gray-600 text-sm">「最短ルートを作成」ボタンをクリックします。最適なルート順序が自動で作成されます。</p>
+            </div>
+
+            <div className="border-l-4 border-green-500 pl-4">
+              <h3 className="font-semibold text-gray-900 mb-2">4. 結果の確認</h3>
+              <p className="text-gray-600 text-sm">総距離と所要時間が表示されます。最適化されたルート順序が表示され、結果に表示された各目的地の名前と住所が間違っていた場合は編集できます。</p>
+            </div>
+
+            <div className="border-l-4 border-green-500 pl-4">
+              <h3 className="font-semibold text-gray-900 mb-2">5. マップ表示</h3>
+              <p className="text-gray-600 text-sm">「Googleマップで表示」ボタンで全体ルートを確認できます。各目的地の「マップ」ボタンで個別の地図を表示できます。</p>
+            </div>
+
+            <div className="border-l-4 border-green-500 pl-4">
+              <h3 className="font-semibold text-gray-900 mb-2">6. ルートの再作成</h3>
+              <p className="text-gray-600 text-sm">目的地を編集後、「ルートの再作成」ボタンで再計算できます。</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* アプリ概要説明 */}
