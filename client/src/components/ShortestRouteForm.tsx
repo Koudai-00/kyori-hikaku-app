@@ -20,12 +20,18 @@ import {
   Edit,
   Save,
   X,
+  Car,
+  PersonStanding,
+  Bike,
+  Train,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
 import PlaceAutocomplete from "./PlaceAutocomplete";
 import GoogleMapView from "./GoogleMapView";
+
+type TravelMode = "driving" | "walking" | "bicycling" | "transit";
 
 interface GeocodingResult {
   name: string;
@@ -44,6 +50,7 @@ interface RouteResult {
 export default function ShortestRouteForm() {
   const [origin, setOrigin] = useState("");
   const [destinationsText, setDestinationsText] = useState("");
+  const [travelMode, setTravelMode] = useState<TravelMode>("driving");
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -141,6 +148,7 @@ export default function ShortestRouteForm() {
     createRouteMutation.mutate({
       origin: origin.trim(),
       destinations,
+      travelMode,
     });
   };
 
@@ -216,6 +224,7 @@ export default function ShortestRouteForm() {
     createRouteMutation.mutate({
       origin: origin.trim(),
       destinations,
+      travelMode,
     });
 
     toast({
@@ -276,6 +285,72 @@ export default function ShortestRouteForm() {
               <p>• 目的地の施設名が有名でない、もしくは明確でない場合は住所を入力してください</p>
               <p>• 目的地は最大10個まで設定可能です</p>
               <p>• 読点（、）、改行、カンマ（,）で区切って入力してください</p>
+            </div>
+          </div>
+
+          {/* Travel Mode Selection */}
+          <div>
+            <Label className="text-sm font-medium text-text-primary">
+              移動手段 *
+            </Label>
+            <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+              <button
+                type="button"
+                onClick={() => setTravelMode("driving")}
+                className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                  travelMode === "driving"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <Car className="h-6 w-6" />
+                  <span className="text-sm font-medium">車</span>
+                </div>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setTravelMode("walking")}
+                className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                  travelMode === "walking"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <PersonStanding className="h-6 w-6" />
+                  <span className="text-sm font-medium">徒歩</span>
+                </div>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setTravelMode("bicycling")}
+                className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                  travelMode === "bicycling"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <Bike className="h-6 w-6" />
+                  <span className="text-sm font-medium">自転車</span>
+                </div>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setTravelMode("transit")}
+                disabled={true}
+                className="p-3 rounded-lg border-2 border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <Train className="h-6 w-6" />
+                  <span className="text-sm font-medium">公共交通機関</span>
+                  <span className="text-xs">（開発中）</span>
+                </div>
+              </button>
             </div>
           </div>
 
@@ -463,7 +538,7 @@ export default function ShortestRouteForm() {
               <GoogleMapView
                 origin={selectedWaypoint.address}
                 destination={selectedWaypoint.address}
-                travelMode="driving"
+                travelMode={travelMode}
                 selectedRoute={0}
               />
             )}
@@ -482,7 +557,7 @@ export default function ShortestRouteForm() {
               <GoogleMapView
                 origin={origin}
                 destination={routeResult.waypoints[routeResult.optimizedOrder[routeResult.optimizedOrder.length - 1]].address}
-                travelMode="driving"
+                travelMode={travelMode}
                 selectedRoute={0}
                 polyline=""
               />

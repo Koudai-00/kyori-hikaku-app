@@ -1020,7 +1020,7 @@ ${allUrls.map(url => `  <url>
   // Create shortest route
   app.post("/api/create-shortest-route", async (req, res) => {
     try {
-      const { origin, destinations } = req.body;
+      const { origin, destinations, travelMode = 'driving' } = req.body;
       
       if (!origin || !destinations || !Array.isArray(destinations)) {
         return res.status(400).json({
@@ -1079,7 +1079,7 @@ ${allUrls.map(url => `  <url>
         .map(wp => `${wp.lat},${wp.lng}`)
         .join('|');
 
-      const directionsUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(waypoints[waypoints.length - 1].address)}&waypoints=optimize:true|${waypointsParam}&language=ja&key=${apiKey}`;
+      const directionsUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(waypoints[waypoints.length - 1].address)}&waypoints=optimize:true|${waypointsParam}&mode=${travelMode}&language=ja&key=${apiKey}`;
       
       const directionsResponse = await fetch(directionsUrl);
       const directionsData = await directionsResponse.json();
