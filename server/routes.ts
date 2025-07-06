@@ -1020,7 +1020,7 @@ ${allUrls.map(url => `  <url>
   // Create shortest route
   app.post("/api/create-shortest-route", async (req, res) => {
     try {
-      const { origin, destinations, travelMode = 'driving' } = req.body;
+      const { origin, destinations, travelMode = 'driving', routeType = 'nearest' } = req.body;
       
       if (!origin || !destinations || !Array.isArray(destinations)) {
         return res.status(400).json({
@@ -1074,25 +1074,81 @@ ${allUrls.map(url => `  <url>
 
       const waypoints = await Promise.all(geocodingPromises);
       
-      // Create optimized route using Google Directions API
-      const waypointsParam = waypoints
-        .map(wp => `${wp.lat},${wp.lng}`)
-        .join('|');
+      let optimizedOrder: number[];
+      let route: any;
+      
+      if (routeType === 'nearest') {
+        // 近い順ルート: Distance Matrix APIで距離を取得してソート
+        const destinationsParam = waypoints
+          .map(wp => encodeURIComponent(wp.address))
+          .join('|');
+        
+        const distanceMatrixUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${destinationsParam}&mode=${travelMode}&language=ja&key=${apiKey}`;
+        
+        const distanceResponse = await fetch(distanceMatrixUrl);
+        const distanceData = await distanceResponse.json();
+        
+        if (distanceData.status !== 'OK' || !distanceData.rows || distanceData.rows.length === 0) {
+          return res.status(500).json({
+            success: false,
+            message: "距離の計算に失敗しました"
+          });
+        }
+        
+        // 距離順にソート
+        const distanceResults = distanceData.rows[0].elements.map((element: any, index: number) => ({
+          index,
+          distance: element.distance ? element.distance.value : Infinity,
+          duration: element.duration ? element.duration.value : Infinity
+        }));
+        
+        distanceResults.sort((a: any, b: any) => a.distance - b.distance);
+        optimizedOrder = distanceResults.map((result: any) => result.index);
+        
+        // 近い順でDirections APIを呼び出し
+        const sortedWaypoints = optimizedOrder.map(index => waypoints[index]);
+        const waypointsParam = sortedWaypoints
+          .slice(0, -1) // 最後の目的地は destination にする
+          .map(wp => `${wp.lat},${wp.lng}`)
+          .join('|');
+          
+        const lastDestination = sortedWaypoints[sortedWaypoints.length - 1];
+        const directionsUrl = waypointsParam 
+          ? `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(lastDestination.address)}&waypoints=${waypointsParam}&mode=${travelMode}&language=ja&key=${apiKey}`
+          : `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(lastDestination.address)}&mode=${travelMode}&language=ja&key=${apiKey}`;
+        
+        const directionsResponse = await fetch(directionsUrl);
+        const directionsData = await directionsResponse.json();
+        
+        if (directionsData.status !== 'OK' || !directionsData.routes || directionsData.routes.length === 0) {
+          return res.status(500).json({
+            success: false,
+            message: "ルートの計算に失敗しました"
+          });
+        }
+        
+        route = directionsData.routes[0];
+      } else {
+        // 最適化ルート: 既存のロジック
+        const waypointsParam = waypoints
+          .map(wp => `${wp.lat},${wp.lng}`)
+          .join('|');
 
-      const directionsUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(waypoints[waypoints.length - 1].address)}&waypoints=optimize:true|${waypointsParam}&mode=${travelMode}&language=ja&key=${apiKey}`;
-      
-      const directionsResponse = await fetch(directionsUrl);
-      const directionsData = await directionsResponse.json();
-      
-      if (directionsData.status !== 'OK' || !directionsData.routes || directionsData.routes.length === 0) {
-        return res.status(500).json({
-          success: false,
-          message: "ルートの計算に失敗しました"
-        });
+        const directionsUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(waypoints[waypoints.length - 1].address)}&waypoints=optimize:true|${waypointsParam}&mode=${travelMode}&language=ja&key=${apiKey}`;
+        
+        const directionsResponse = await fetch(directionsUrl);
+        const directionsData = await directionsResponse.json();
+        
+        if (directionsData.status !== 'OK' || !directionsData.routes || directionsData.routes.length === 0) {
+          return res.status(500).json({
+            success: false,
+            message: "ルートの計算に失敗しました"
+          });
+        }
+
+        route = directionsData.routes[0];
+        optimizedOrder = directionsData.routes[0].waypoint_order || [];
       }
-
-      const route = directionsData.routes[0];
-      const optimizedOrder = directionsData.routes[0].waypoint_order || [];
       
       // Calculate total distance and duration
       let totalDistance = 0;

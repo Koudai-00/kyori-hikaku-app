@@ -51,6 +51,7 @@ export default function ShortestRouteForm() {
   const [origin, setOrigin] = useState("");
   const [destinationsText, setDestinationsText] = useState("");
   const [travelMode, setTravelMode] = useState<TravelMode>("driving");
+  const [routeType, setRouteType] = useState<"nearest" | "optimized">("nearest");
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -149,6 +150,7 @@ export default function ShortestRouteForm() {
       origin: origin.trim(),
       destinations,
       travelMode,
+      routeType,
     });
   };
 
@@ -225,6 +227,7 @@ export default function ShortestRouteForm() {
       origin: origin.trim(),
       destinations,
       travelMode,
+      routeType,
     });
 
     toast({
@@ -285,6 +288,45 @@ export default function ShortestRouteForm() {
               <p>• 目的地の施設名が有名でない、もしくは明確でない場合は住所を入力してください</p>
               <p>• 目的地は最大10個まで設定可能です</p>
               <p>• 読点（、）、改行、カンマ（,）で区切って入力してください</p>
+            </div>
+          </div>
+
+          {/* Route Type Selection */}
+          <div>
+            <Label className="text-sm font-medium text-text-primary">
+              ルート作成方法 *
+            </Label>
+            <div className="mt-3 space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="routeType"
+                  value="nearest"
+                  checked={routeType === "nearest"}
+                  onChange={(e) => setRouteType(e.target.value as "nearest" | "optimized")}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-medium text-text-primary">近い順ルート</div>
+                  <div className="text-sm text-gray-600">出発地から近い順に目的地を並べてルートを作成します</div>
+                </div>
+              </label>
+              
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="routeType"
+                  value="optimized"
+                  checked={routeType === "optimized"}
+                  onChange={(e) => setRouteType(e.target.value as "nearest" | "optimized")}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-medium text-text-primary">最適化ルート</div>
+                  <div className="text-sm text-gray-600">総移動距離が最短になるようにルートを最適化します</div>
+                  <div className="text-xs text-gray-500 mt-1">最適化ルートは出発地から目的地を経由し、再度出発地に戻るルートを作成します</div>
+                </div>
+              </label>
             </div>
           </div>
 
