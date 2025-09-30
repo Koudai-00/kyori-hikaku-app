@@ -8,7 +8,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface AdminLoginProps {
-  onLogin: () => void;
+  onLogin: (password: string) => void;
 }
 
 export default function AdminLogin({ onLogin }: AdminLoginProps) {
@@ -20,9 +20,9 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
       const response = await apiRequest("POST", "/api/admin/login", { password });
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data, password) => {
       if (data.success) {
-        onLogin();
+        onLogin(password);
         toast({
           title: "ログイン成功",
           description: "管理画面にログインしました",

@@ -155,6 +155,29 @@ Changelog:
   - 環境変数ADMIN_PASSWORDでカンマ区切りで複数パスワードを設定可能に
   - 設定されたパスワードのいずれかでログイン可能
   - 実装場所: server/routes.ts (ADMIN_PASSWORDS配列化とログイン処理変更)
+- September 30, 2025. AI記事投稿APIトークンシステムを実装
+  - **背景**: AI自動化ツールから記事投稿する際、管理者パスワードを使わずに安全に投稿できるトークンシステムを実装
+  - **データベース**: apiTokensテーブルを追加（id, token, name, createdAt, usageCount）
+  - **トークン生成**: crypto.randomBytes(32)による暗号学的に安全なトークン（ai_プレフィックス付き）
+  - **AI専用エンドポイント**: POST /api/ai/create-article - 記事作成用の認証済みエンドポイント
+    - 認証方法: Authorization Bearer、X-API-Key ヘッダー、またはボディのtokenフィールド
+    - サムネイル画像のbase64サポート
+    - 使用回数の自動追跡
+  - **管理画面機能**: 
+    - APIトークン管理タブを追加
+    - トークン作成・削除機能
+    - 使用状況トラッキング
+    - トークンコピー機能
+    - 使い方のドキュメント表示
+  - **セキュリティ強化**:
+    - requireAdmin ミドルウェアですべての/api/admin/*エンドポイントを保護
+    - X-Admin-Passwordヘッダーによる管理者認証
+    - ADMIN_PASSWORD環境変数必須化（デフォルトパスワード廃止）
+    - フロントエンドでadminFetchヘルパー関数により全管理者APIコールに認証ヘッダー追加
+  - **既知の制限事項**:
+    - APIトークンは平文保存（将来的にハッシュ化推奨）
+    - 管理者パスワードはsessionStorageに保存（XSS脆弱性の可能性）
+    - レート制限未実装
 ```
 
 ## User Preferences

@@ -1,4 +1,4 @@
-import { users, userUsage, distanceQuery, articles, contacts, type User, type InsertUser, type UserUsage, type InsertUserUsage, type DistanceQuery, type InsertDistanceQuery, type Article, type InsertArticle, type Contact, type InsertContact } from "@shared/schema";
+import { users, userUsage, distanceQuery, articles, contacts, apiTokens, type User, type InsertUser, type UserUsage, type InsertUserUsage, type DistanceQuery, type InsertDistanceQuery, type Article, type InsertArticle, type Contact, type InsertContact, type ApiToken, type InsertApiToken } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, count, lt } from "drizzle-orm";
 
@@ -43,6 +43,13 @@ export interface IStorage {
   updateContactStatus(id: number, status: string): Promise<Contact | undefined>;
   deleteContact(id: number): Promise<boolean>;
   generateInquiryNumber(): string;
+
+  // API Token operations
+  createApiToken(token: InsertApiToken): Promise<ApiToken>;
+  getAllApiTokens(): Promise<ApiToken[]>;
+  getApiTokenByToken(token: string): Promise<ApiToken | undefined>;
+  updateApiTokenLastUsed(token: string): Promise<void>;
+  deleteApiToken(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -321,6 +328,43 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(contacts)
       .where(eq(contacts.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async createApiToken(insertToken: InsertApiToken): Promise<ApiToken> {
+    const [token] = await db
+      .insert(apiTokens)
+      .values(insertToken)
+      .returning();
+    return token;
+  }
+
+  async getAllApiTokens(): Promise<ApiToken[]> {
+    return await db
+      .select()
+      .from(apiTokens)
+      .orderBy(desc(apiTokens.createdAt));
+  }
+
+  async getApiTokenByToken(token: string): Promise<ApiToken | undefined> {
+    const [result] = await db
+      .select()
+      .from(apiTokens)
+      .where(eq(apiTokens.token, token));
+    return result || undefined;
+  }
+
+  async updateApiTokenLastUsed(token: string): Promise<void> {
+    await db
+      .update(apiTokens)
+      .set({ lastUsed: new Date() })
+      .where(eq(apiTokens.token, token));
+  }
+
+  async deleteApiToken(id: number): Promise<boolean> {
+    const result = await db
+      .delete(apiTokens)
+      .where(eq(apiTokens.id, id));
     return (result.rowCount || 0) > 0;
   }
 }

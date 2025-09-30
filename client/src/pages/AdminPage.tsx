@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AdminLogin from "@/components/AdminLogin";
 import ArticleEditor from "@/components/ArticleEditor";
-import { LogOut, FileText, BarChart3, Edit, Trash2, Search, ChevronLeft, ChevronRight, Database, AlertTriangle, MessageSquare, Eye } from "lucide-react";
+import { LogOut, FileText, BarChart3, Edit, Trash2, Search, ChevronLeft, ChevronRight, Database, AlertTriangle, MessageSquare, Eye, Key, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function AdminPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
   const [editingArticle, setEditingArticle] = useState<any>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<any>(null);
@@ -32,17 +33,31 @@ export default function AdminPage() {
   const [contactDetailOpen, setContactDetailOpen] = useState(false);
   const contactItemsPerPage = 10;
   
+  // APIトークン管理の状態
+  const [newTokenName, setNewTokenName] = useState("");
+  const [tokenToDelete, setTokenToDelete] = useState<any>(null);
+  const [deleteTokenConfirmOpen, setDeleteTokenConfirmOpen] = useState(false);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // 管理者API呼び出しヘルパー関数
+  const adminFetch = async (url: string, options: RequestInit = {}) => {
+    const headers = {
+      ...options.headers,
+      'X-Admin-Password': adminPassword
+    };
+    return fetch(url, { ...options, headers });
+  };
 
   const { data: statsData, refetch } = useQuery({
     queryKey: ["/api/admin/stats"],
     queryFn: async () => {
-      const response = await fetch("/api/admin/stats");
+      const response = await adminFetch("/api/admin/stats");
       if (!response.ok) throw new Error("Failed to fetch admin stats");
       return response.json();
     },
-    enabled: isLoggedIn,
+    enabled: isLoggedIn && !!adminPassword,
   });
 
   const { data: articlesData, refetch: refetchArticles } = useQuery({
@@ -52,56 +67,61 @@ export default function AdminPage() {
       if (!response.ok) throw new Error("Failed to fetch articles");
       return response.json();
     },
-    enabled: isLoggedIn,
+    enabled: isLoggedIn && !!adminPassword,
   });
 
   // Cleanup management queries
   const { data: cleanupStats, refetch: refetchCleanupStats } = useQuery({
     queryKey: ["/api/admin/cleanup/stats"],
     queryFn: async () => {
-      const response = await fetch("/api/admin/cleanup/stats");
+      const response = await adminFetch("/api/admin/cleanup/stats");
       if (!response.ok) throw new Error("Failed to fetch cleanup stats");
       return response.json();
     },
-    enabled: isLoggedIn,
+    enabled: isLoggedIn && !!adminPassword,
   });
 
   const { data: cleanupStatus } = useQuery({
     queryKey: ["/api/admin/cleanup/status"],
     queryFn: async () => {
-      const response = await fetch("/api/admin/cleanup/status");
+      const response = await adminFetch("/api/admin/cleanup/status");
       if (!response.ok) throw new Error("Failed to fetch cleanup status");
       return response.json();
     },
-    enabled: isLoggedIn,
+    enabled: isLoggedIn && !!adminPassword,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   const { data: testModeData, refetch: refetchTestMode } = useQuery({
     queryKey: ["/api/admin/test-mode"],
     queryFn: async () => {
-      const response = await fetch("/api/admin/test-mode");
+      const response = await adminFetch("/api/admin/test-mode");
       if (!response.ok) throw new Error("Failed to fetch test mode status");
       return response.json();
     },
-    enabled: isLoggedIn,
+    enabled: isLoggedIn && !!adminPassword,
   });
 
   // 問い合わせ一覧クエリ
   const { data: contactsData, refetch: refetchContacts } = useQuery({
     queryKey: ["/api/admin/contacts", contactCurrentPage],
     queryFn: async () => {
-      const response = await fetch(`/api/admin/contacts?page=${contactCurrentPage}&limit=${contactItemsPerPage}`);
+      const response = await adminFetch(`/api/admin/contacts?page=${contactCurrentPage}&limit=${contactItemsPerPage}`);
       if (!response.ok) throw new Error("Failed to fetch contacts");
       return response.json();
     },
-    enabled: isLoggedIn,
+    enabled: isLoggedIn && !!adminPassword,
   });
 
   // 問い合わせステータス更新ミューテーション
   const updateContactStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      const response = await apiRequest("PUT", `/api/admin/contacts/${id}/status`, { status });
+      const response = await adminFetch(`/api/admin/contacts/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (!response.ok) throw new Error("Failed to update contact status");
       return response.json();
     },
     onSuccess: () => {
@@ -115,6 +135,82 @@ export default function AdminPage() {
       toast({
         title: "エラー",
         description: "ステータスの更新に失敗しました。",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // APIトークン一覧クエリ
+  const { data: tokensData, refetch: refetchTokens } = useQuery({
+    queryKey: ["/api/admin/tokens"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/tokens", {
+        headers: {
+          'X-Admin-Password': adminPassword
+        }
+      });
+      if (!response.ok) throw new Error("Failed to fetch tokens");
+      return response.json();
+    },
+    enabled: isLoggedIn && !!adminPassword,
+  });
+
+  // トークン作成ミューテーション
+  const createTokenMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const response = await fetch("/api/admin/tokens", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Password': adminPassword
+        },
+        body: JSON.stringify({ name })
+      });
+      if (!response.ok) throw new Error("Failed to create token");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "トークン作成完了",
+        description: "新しいAPIトークンを作成しました。",
+      });
+      setNewTokenName("");
+      refetchTokens();
+    },
+    onError: () => {
+      toast({
+        title: "エラー",
+        description: "トークンの作成に失敗しました。",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // トークン削除ミューテーション
+  const deleteTokenMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/admin/tokens/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'X-Admin-Password': adminPassword
+        }
+      });
+      if (!response.ok) throw new Error("Failed to delete token");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "削除完了",
+        description: "APIトークンを削除しました。",
+      });
+      setDeleteTokenConfirmOpen(false);
+      setTokenToDelete(null);
+      refetchTokens();
+    },
+    onError: () => {
+      toast({
+        title: "エラー",
+        description: "トークンの削除に失敗しました。",
         variant: "destructive",
       });
     },
@@ -168,8 +264,11 @@ export default function AdminPage() {
     setCurrentPage(1);
   };
 
-  const handleLogin = () => {
+  const handleLogin = (password: string) => {
+    setAdminPassword(password);
     setIsLoggedIn(true);
+    // sessionStorageに保存（ページリロード時に復元するため）
+    sessionStorage.setItem('adminPassword', password);
     refetch();
     refetchArticles();
   };
@@ -238,7 +337,7 @@ export default function AdminPage() {
 
   const cleanupMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch("/api/admin/cleanup/execute", {
+      const response = await adminFetch("/api/admin/cleanup/execute", {
         method: 'POST',
       });
       if (!response.ok) throw new Error("Failed to execute cleanup");
@@ -262,7 +361,7 @@ export default function AdminPage() {
 
   const toggleTestModeMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch("/api/admin/toggle-test-mode", {
+      const response = await adminFetch("/api/admin/toggle-test-mode", {
         method: 'POST',
       });
       if (!response.ok) throw new Error("Failed to toggle test mode");
@@ -367,6 +466,8 @@ export default function AdminPage() {
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setAdminPassword("");
+    sessionStorage.removeItem('adminPassword');
   };
 
   if (!isLoggedIn) {
@@ -389,7 +490,7 @@ export default function AdminPage() {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="stats" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             統計情報
@@ -409,6 +510,10 @@ export default function AdminPage() {
           <TabsTrigger value="articleList" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             記事一覧
+          </TabsTrigger>
+          <TabsTrigger value="apiTokens" className="flex items-center gap-2">
+            <Key className="h-4 w-4" />
+            APIトークン
           </TabsTrigger>
         </TabsList>
         
@@ -889,6 +994,153 @@ export default function AdminPage() {
             <PaginationComponent />
           </div>
         </TabsContent>
+
+        <TabsContent value="apiTokens" className="mt-6">
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold text-text-primary mb-4">APIトークン管理</h3>
+              <p className="text-text-secondary mb-4">
+                AIツールからの記事投稿に使用するAPIトークンを管理します。
+              </p>
+            </div>
+
+            {/* トークン作成フォーム */}
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-semibold text-text-primary mb-3">新しいトークンを作成</h4>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="トークン名（例：ChatGPT用、Claude用）"
+                  value={newTokenName}
+                  onChange={(e) => setNewTokenName(e.target.value)}
+                  className="flex-1"
+                  data-testid="input-token-name"
+                />
+                <Button
+                  onClick={() => createTokenMutation.mutate(newTokenName)}
+                  disabled={!newTokenName || createTokenMutation.isPending}
+                  data-testid="button-create-token"
+                >
+                  {createTokenMutation.isPending ? '作成中...' : 'トークン作成'}
+                </Button>
+              </div>
+            </div>
+
+            {/* トークン一覧 */}
+            <div>
+              <h4 className="font-semibold text-text-primary mb-3">登録済みトークン</h4>
+              {tokensData && tokensData.length > 0 ? (
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          トークン名
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          トークン
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          作成日
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          最終使用日
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          操作
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {tokensData.map((token: any) => (
+                        <tr key={token.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {token.name}
+                          </td>
+                          <td className="px-4 py-4 text-sm font-mono text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate max-w-xs">{token.token}</span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(token.token);
+                                  toast({
+                                    title: "コピーしました",
+                                    description: "トークンをクリップボードにコピーしました。",
+                                  });
+                                }}
+                                data-testid={`button-copy-token-${token.id}`}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {new Date(token.createdAt).toLocaleDateString('ja-JP')}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {token.lastUsed ? new Date(token.lastUsed).toLocaleDateString('ja-JP') : '未使用'}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setTokenToDelete(token);
+                                setDeleteTokenConfirmOpen(true);
+                              }}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              data-testid={`button-delete-token-${token.id}`}
+                            >
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              削除
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="bg-gray-50 p-8 rounded-lg text-center text-text-secondary">
+                  登録されたトークンはありません
+                </div>
+              )}
+            </div>
+
+            {/* 使い方の説明 */}
+            <div className="bg-yellow-50 p-4 rounded-lg">
+              <h4 className="font-semibold text-text-primary mb-2">APIの使い方</h4>
+              <div className="text-sm text-text-secondary space-y-3">
+                <p>以下のエンドポイントに記事データを送信してください：</p>
+                <code className="block bg-white p-2 rounded border text-xs">
+                  POST {window.location.origin}/api/ai/create-article
+                </code>
+                
+                <div>
+                  <p className="font-semibold mb-1">認証方法（いずれか）：</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>ヘッダー: <code className="bg-white px-1">Authorization: Bearer &lt;token&gt;</code></li>
+                    <li>ヘッダー: <code className="bg-white px-1">X-API-Key: &lt;token&gt;</code></li>
+                    <li>ボディ: <code className="bg-white px-1">{`{"token": "<token>"}`}</code></li>
+                  </ul>
+                </div>
+                
+                <p className="mt-3">リクエスト例（ヘッダー認証）：</p>
+                <pre className="bg-white p-2 rounded border text-xs overflow-x-auto">
+{`curl -X POST ${window.location.origin}/api/ai/create-article \\
+  -H "Authorization: Bearer your_token_here" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "title": "記事タイトル",
+    "content": "<p>記事本文（HTML形式）</p>",
+    "thumbnail": "data:image/jpeg;base64,..." (オプション)
+  }'`}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* 削除確認ダイアログ */}
@@ -1019,6 +1271,45 @@ export default function AdminPage() {
               onClick={() => setContactDetailOpen(false)}
             >
               閉じる
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* トークン削除確認ダイアログ */}
+      <Dialog open={deleteTokenConfirmOpen} onOpenChange={setDeleteTokenConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>APIトークンの削除</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-text-secondary">
+              「{tokenToDelete?.name}」を削除しますか？
+            </p>
+            <p className="text-text-secondary mt-2 text-sm">
+              このトークンを使用しているAIツールは記事を投稿できなくなります。
+            </p>
+            <p className="text-text-secondary mt-1 text-sm">
+              この操作は取り消すことができません。
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteTokenConfirmOpen(false);
+                setTokenToDelete(null);
+              }}
+              disabled={deleteTokenMutation.isPending}
+            >
+              キャンセル
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteTokenMutation.mutate(tokenToDelete?.id)}
+              disabled={deleteTokenMutation.isPending}
+            >
+              {deleteTokenMutation.isPending ? '削除中...' : '削除'}
             </Button>
           </DialogFooter>
         </DialogContent>

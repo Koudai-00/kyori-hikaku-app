@@ -61,6 +61,16 @@ export const contacts = pgTable("contacts", {
   createdAtIdx: index("contacts_created_at_idx").on(table.createdAt),
 }));
 
+export const apiTokens = pgTable("api_tokens", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastUsed: timestamp("last_used"),
+}, (table) => ({
+  tokenIdx: index("api_tokens_token_idx").on(table.token),
+}));
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -91,6 +101,12 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
   updatedAt: true,
 });
 
+export const insertApiTokenSchema = createInsertSchema(apiTokens).omit({
+  id: true,
+  createdAt: true,
+  lastUsed: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertUserUsage = z.infer<typeof insertUserUsageSchema>;
@@ -101,3 +117,5 @@ export type InsertArticle = z.infer<typeof insertArticleSchema>;
 export type Article = typeof articles.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 export type Contact = typeof contacts.$inferSelect;
+export type InsertApiToken = z.infer<typeof insertApiTokenSchema>;
+export type ApiToken = typeof apiTokens.$inferSelect;

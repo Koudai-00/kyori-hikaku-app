@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertUserUsageSchema, insertDistanceQuerySchema, insertArticleSchema, insertContactSchema } from "@shared/schema";
@@ -8,12 +8,19 @@ import path from "path";
 import fs from "fs";
 import express from "express";
 import sharp from "sharp";
+import crypto from "crypto";
 import { processContactSubmission } from "./emailService";
 import { sendLineNotification } from "./lineService";
 import { verifyRecaptcha } from "./recaptchaService";
 
 // 複数のパスワードをカンマ区切りで設定可能（例: "password1,password2"）
-const ADMIN_PASSWORDS = (process.env.ADMIN_PASSWORD || "admin123")
+if (!process.env.ADMIN_PASSWORD) {
+  console.error("❗ ADMIN_PASSWORD環境変数が設定されていません。セキュリティ上の理由から、デフォルトパスワードは使用できません。");
+  console.error("→ SecretsでADMIN_PASSWORDを設定してください。");
+  process.exit(1);
+}
+
+const ADMIN_PASSWORDS = process.env.ADMIN_PASSWORD
   .split(',')
   .map(pwd => pwd.trim())
   .filter(pwd => pwd.length > 0);
@@ -51,6 +58,17 @@ const upload = multer({
     }
   }
 });
+
+// Admin authentication middleware
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  const adminPassword = req.headers['x-admin-password'] as string;
+  
+  if (!adminPassword || !ADMIN_PASSWORDS.includes(adminPassword)) {
+    return res.status(401).json({ message: "管理者認証が必要です" });
+  }
+  
+  next();
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -511,8 +529,55 @@ ${allUrls.map(url => `  <url>
     }
   });
 
+  // API Token management endpoints (admin only)
+  app.get("/api/admin/tokens", requireAdmin, async (req, res) => {
+    try {
+      const tokens = await storage.getAllApiTokens();
+      res.json(tokens);
+    } catch (error) {
+      console.error('Error fetching tokens:', error);
+      res.status(500).json({ message: "トークンの取得に失敗しました" });
+    }
+  });
+
+  app.post("/api/admin/tokens", requireAdmin, async (req, res) => {
+    try {
+      const { name } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "トークン名が必要です" });
+      }
+
+      // 暗号学的に安全なランダムトークンを生成
+      const tokenBytes = crypto.randomBytes(32);
+      const token = 'ai_' + tokenBytes.toString('base64url');
+
+      const newToken = await storage.createApiToken({ token, name });
+      res.status(201).json(newToken);
+    } catch (error) {
+      console.error('Error creating token:', error);
+      res.status(500).json({ message: "トークンの作成に失敗しました" });
+    }
+  });
+
+  app.delete("/api/admin/tokens/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteApiToken(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "トークンが見つかりません" });
+      }
+      
+      res.json({ message: "トークンを削除しました" });
+    } catch (error) {
+      console.error('Error deleting token:', error);
+      res.status(500).json({ message: "トークンの削除に失敗しました" });
+    }
+  });
+
   // Data cleanup endpoints (admin only)
-  app.get('/api/admin/cleanup/stats', async (req, res) => {
+  app.get('/api/admin/cleanup/stats', requireAdmin, async (req, res) => {
     try {
       const stats = await storage.getOldDataStats();
       res.json(stats);
@@ -522,7 +587,7 @@ ${allUrls.map(url => `  <url>
     }
   });
 
-  app.post('/api/admin/cleanup/execute', async (req, res) => {
+  app.post('/api/admin/cleanup/execute', requireAdmin, async (req, res) => {
     try {
       const { cleanupScheduler } = await import('./cleanup-scheduler');
       const result = await cleanupScheduler.manualCleanup();
@@ -538,7 +603,7 @@ ${allUrls.map(url => `  <url>
     }
   });
 
-  app.get('/api/admin/cleanup/status', async (req, res) => {
+  app.get('/api/admin/cleanup/status', requireAdmin, async (req, res) => {
     try {
       const { cleanupScheduler } = await import('./cleanup-scheduler');
       const status = cleanupScheduler.getStatus();
@@ -550,7 +615,7 @@ ${allUrls.map(url => `  <url>
   });
 
   // Admin statistics
-  app.get("/api/admin/stats", async (req, res) => {
+  app.get("/api/admin/stats", requireAdmin, async (req, res) => {
     try {
       const currentMonth = `${new Date().getMonth() + 1}_${new Date().getFullYear()}`;
       
@@ -727,6 +792,60 @@ ${allUrls.map(url => `  <url>
     }
   });
 
+  // AI専用記事投稿エンドポイント（トークン認証）
+  app.post("/api/ai/create-article", async (req, res) => {
+    try {
+      // ヘッダーまたはボディからトークンを取得（ヘッダーを優先）
+      const authHeader = req.headers.authorization;
+      let token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+      
+      if (!token) {
+        token = req.headers['x-api-key'] as string;
+      }
+      
+      if (!token) {
+        token = req.body.token;
+      }
+      
+      if (!token) {
+        return res.status(401).json({ message: "APIトークンが必要です（Authorization: Bearer <token>、X-API-Key、またはbody.token）" });
+      }
+
+      // ボディからトークンを削除（既に取得済み）
+      const { token: _, ...articleData } = req.body;
+
+      // トークンの検証
+      const validToken = await storage.getApiTokenByToken(token);
+      if (!validToken) {
+        return res.status(401).json({ message: "無効なAPIトークンです" });
+      }
+
+      // トークンの最終使用日時を更新
+      await storage.updateApiTokenLastUsed(token);
+
+      // 記事データのバリデーション
+      const validatedArticle = insertArticleSchema.parse(articleData);
+      
+      // 記事を作成
+      const article = await storage.createArticle(validatedArticle);
+      
+      res.status(201).json({ 
+        success: true,
+        article,
+        message: "記事が正常に投稿されました" 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "記事データが無効です", 
+          errors: error.errors 
+        });
+      }
+      console.error('AI article creation error:', error);
+      res.status(500).json({ message: "記事の投稿に失敗しました" });
+    }
+  });
+
   // XML Sitemap endpoint
   app.get('/sitemap.xml', async (req, res) => {
     try {
@@ -850,7 +969,7 @@ ${allUrls.map(url => `  <url>
   });
 
   // Admin: Get contacts with pagination
-  app.get("/api/admin/contacts", async (req, res) => {
+  app.get("/api/admin/contacts", requireAdmin, async (req, res) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
@@ -867,7 +986,7 @@ ${allUrls.map(url => `  <url>
   });
 
   // Admin: Get single contact by ID
-  app.get("/api/admin/contacts/:id", async (req, res) => {
+  app.get("/api/admin/contacts/:id", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const contact = await storage.getContactById(id);
@@ -890,7 +1009,7 @@ ${allUrls.map(url => `  <url>
   });
 
   // Admin: Update contact status
-  app.put("/api/admin/contacts/:id/status", async (req, res) => {
+  app.put("/api/admin/contacts/:id/status", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { status } = req.body;
@@ -926,7 +1045,7 @@ ${allUrls.map(url => `  <url>
   });
 
   // Admin: Delete contact
-  app.delete("/api/admin/contacts/:id", async (req, res) => {
+  app.delete("/api/admin/contacts/:id", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteContact(id);
@@ -952,7 +1071,7 @@ ${allUrls.map(url => `  <url>
   });
 
   // Admin: Get test mode status
-  app.get("/api/admin/test-mode", async (req, res) => {
+  app.get("/api/admin/test-mode", requireAdmin, async (req, res) => {
     try {
       const userTrackingPath = path.join(process.cwd(), 'client/src/lib/userTracking.ts');
       
@@ -972,7 +1091,7 @@ ${allUrls.map(url => `  <url>
   });
 
   // Admin: Toggle test mode
-  app.post("/api/admin/toggle-test-mode", async (req, res) => {
+  app.post("/api/admin/toggle-test-mode", requireAdmin, async (req, res) => {
     try {
       const userTrackingPath = path.join(process.cwd(), 'client/src/lib/userTracking.ts');
       
