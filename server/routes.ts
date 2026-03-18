@@ -25,7 +25,7 @@ const ADMIN_PASSWORDS = process.env.ADMIN_PASSWORD
   .map(pwd => pwd.trim())
   .filter(pwd => pwd.length > 0);
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
-const FRONTEND_GOOGLE_MAPS_API_KEY = "AIzaSyDV-CnRnVjrMhv6-hAFFJgq7Qx_ze2S4FA";
+const FRONTEND_GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
 // アップロードディレクトリの設定（永続ストレージ）
 const uploadsDir = path.join(process.cwd(), 'persistent_uploads');
