@@ -48,11 +48,9 @@ export default function ContactPage() {
 
   const submitMutation = useMutation({
     mutationFn: async (data: ContactFormData) => {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const url = supabaseUrl
-        ? `${supabaseUrl}/functions/v1/contact`
-        : "/api/contact";
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://fhmutjpvzwizmyryqajt.supabase.co";
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZobXV0anB2endpem15cnlxYWp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NzI2NjgsImV4cCI6MjA4OTM0ODY2OH0.EMbDswWPDcgA-k1smwP72OFsEqIsJQd6_4QqjcIPXq8";
+      const url = `${supabaseUrl}/functions/v1/contact`;
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (supabaseAnonKey) headers["Authorization"] = `Bearer ${supabaseAnonKey}`;
       const response = await fetch(url, {
