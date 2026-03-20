@@ -3,17 +3,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  MapPin,
-  Plus,
-  Trash2,
-  Calculator,
-  Car,
-  MapPinIcon as Walking,
-  Bike,
-  Train,
-  Settings,
-} from "lucide-react";
+import { MapPin, Plus, Trash2, Calculator, Car, MapPin as Walking, Bike, Brain as Train, Settings } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
@@ -129,38 +119,22 @@ export default function DistanceForm() {
   });
 
   const checkUsageMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (calculationData: {
+      origin: string;
+      destinations: string[];
+      routeSettings?: Record<number, RouteSettings>;
+    }) => {
       const response = await fetch(`/api/usage/${userId}/${currentMonth}`);
       if (!response.ok) throw new Error("Failed to check usage");
-      return response.json();
+      const usageData = await response.json();
+      return { usageData, calculationData };
     },
-    onSuccess: (data) => {
-      // 利用制限チェックを一時的に無効化
-      /*
-      if (data.usageCount >= 3 && !isTestUser(userId)) {
-        setShowAdModal(true);
-      } else {
-      */
-        // Proceed with calculation
-        if (pendingCalculation) {
-          console.log("Sending calculation with settings:", pendingCalculation);
-
-          // pendingCalculation内のrouteSettingsが適切にあるか確認
-          if (pendingCalculation.routeSettings) {
-            console.log(
-              "Route settings being sent:",
-              pendingCalculation.routeSettings,
-            );
-          }
-
-          calculateMutation.mutate({
-            ...pendingCalculation,
-            travelMode,
-            userId,
-          });
-          setPendingCalculation(null);
-        }
-      // }
+    onSuccess: ({ calculationData }) => {
+      calculateMutation.mutate({
+        ...calculationData,
+        travelMode,
+        userId,
+      });
     },
   });
 
@@ -217,14 +191,15 @@ export default function DistanceForm() {
       routeSettingsMap[key] = value;
     });
 
-    setPendingCalculation({
+    const calculationData = {
       origin: origin.trim(),
       destinations: validDestinations,
       routeSettings:
         Object.keys(routeSettingsMap).length > 0 ? routeSettingsMap : undefined,
-    });
+    };
 
-    checkUsageMutation.mutate();
+    setPendingCalculation(calculationData);
+    checkUsageMutation.mutate(calculationData);
   };
 
   // 広告完了ハンドラー（一時的に無効化）
