@@ -7,10 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, ArrowRight, Check, Home } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Chrome as Home } from "lucide-react";
 import { Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 const contactFormSchema = z.object({
@@ -49,7 +48,22 @@ export default function ContactPage() {
 
   const submitMutation = useMutation({
     mutationFn: async (data: ContactFormData) => {
-      const response = await apiRequest("POST", "/api/contact", data);
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const url = supabaseUrl
+        ? `${supabaseUrl}/functions/v1/contact`
+        : "/api/contact";
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (supabaseAnonKey) headers["Authorization"] = `Bearer ${supabaseAnonKey}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`${response.status}: ${text}`);
+      }
       return await response.json() as ContactResponse;
     },
     onSuccess: (response) => {
