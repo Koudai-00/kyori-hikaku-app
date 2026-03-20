@@ -124,12 +124,16 @@ export default function DistanceForm() {
       destinations: string[];
       routeSettings?: Record<number, RouteSettings>;
     }) => {
-      const response = await fetch(`/api/usage/${userId}/${currentMonth}`);
-      if (!response.ok) throw new Error("Failed to check usage");
-      const usageData = await response.json();
-      return { usageData, calculationData };
+      try {
+        const response = await fetch(`/api/usage/${userId}/${currentMonth}`);
+        if (response.ok) {
+          await response.json();
+        }
+      } catch {
+      }
+      return calculationData;
     },
-    onSuccess: ({ calculationData }) => {
+    onSuccess: (calculationData) => {
       calculateMutation.mutate({
         ...calculationData,
         travelMode,

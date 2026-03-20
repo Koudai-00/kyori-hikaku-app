@@ -45,14 +45,25 @@ export default function PlaceAutocomplete({
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
 
   useEffect(() => {
-    // Google Maps APIが読み込まれているかチェック
-    if (window.google && window.google.maps && window.google.maps.places) {
-      autocompleteService.current = new window.google.maps.places.AutocompleteService();
+    const initServices = () => {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        autocompleteService.current = new window.google.maps.places.AutocompleteService();
+        const mapDiv = document.createElement('div');
+        const map = new window.google.maps.Map(mapDiv);
+        placesService.current = new window.google.maps.places.PlacesService(map);
+      }
+    };
 
-      // PlacesServiceの初期化には地図要素が必要
-      const mapDiv = document.createElement('div');
-      const map = new window.google.maps.Map(mapDiv);
-      placesService.current = new window.google.maps.places.PlacesService(map);
+    if (window.google && window.google.maps && window.google.maps.places) {
+      initServices();
+    } else {
+      const interval = setInterval(() => {
+        if (window.google && window.google.maps && window.google.maps.places) {
+          initServices();
+          clearInterval(interval);
+        }
+      }, 200);
+      return () => clearInterval(interval);
     }
   }, []);
 
